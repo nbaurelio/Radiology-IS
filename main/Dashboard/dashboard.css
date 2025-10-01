@@ -1,4 +1,4 @@
-:root{
+:root, [data-theme="light"]{
   --bg: #f6f7fb;
   --panel: #ffffff;
   --ink: #0f172a;
@@ -9,11 +9,9 @@
   --shadow: 0 10px 25px rgba(0,0,0,.06);
   --radius: 16px;
 }
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg:#0b0d12; --panel:#121620; --ink:#e5e7eb; --muted:#9aa3af;
-    --brand:#8b7bff; --brand-weak:#1b1f2d; --line:#23293a; --shadow: 0 10px 25px rgba(0,0,0,.35);
-  }
+[data-theme="dark"]{
+  --bg:#0b0d12; --panel:#121620; --ink:#e5e7eb; --muted:#9aa3af;
+  --brand:#8b7bff; --brand-weak:#1b1f2d; --line:#23293a; --shadow: 0 10px 25px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -43,7 +41,29 @@ body{
 .actions{display:flex; align-items:center; gap:10px}
 .btn{
   padding:8px 12px; border:1px solid var(--line); border-radius:10px;
-  background:var(--panel); color:var(--ink);
+  background:var(--panel); color:var(--ink); cursor:pointer;
+  text-decoration:none; display:inline-block;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.btn:hover{
+  background:var(--bg); border-color:var(--muted);
+}
+.btn-login-nav{
+  background:linear-gradient(135deg, var(--brand), #7a5af8);
+  color:white; border:none; font-weight:600;
+  box-shadow: 0 2px 8px rgba(109,93,252,.25);
+}
+.btn-login-nav:hover{
+  background:linear-gradient(135deg, #7a5af8, var(--brand));
+  box-shadow: 0 4px 12px rgba(109,93,252,.35);
+}
+.theme-toggle{
+  width:36px; height:36px; border:1px solid var(--line); border-radius:10px;
+  background:var(--panel); cursor:pointer; display:flex; align-items:center;
+  justify-content:center; font-size:18px; transition: transform 0.2s ease, background 0.2s ease;
+}
+.theme-toggle:hover{
+  background:var(--bg); transform:scale(1.05);
 }
 .avatar{width:28px; height:28px; border-radius:999px; background:linear-gradient(135deg,#ffd166,#ff7eb6); display:block}
 
@@ -208,6 +228,3 @@ grid-column: span 12
 /* Ensure full-width containers span all columns */
 .overview{ grid-column: 1 / -1; }
 .table-card{ grid-column: 1 / -1; }
-
-/* Optional: add data-labels in HTML for perfect mobile labels (see note below) */
-

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login - Radiology IS</title>
+    <link rel="stylesheet" href="login.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<button id="themeToggle" class="theme-toggle-login" aria-label="Toggle theme">🌙</button>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="logo-large"></div>
+            <h1>Radiology IS</h1>
+            <p class="subtitle">Sign in to your account</p>
+        </div>
+
+        <form id="loginForm" class="login-form">
+            <div class="form-group">
+                <label for="userId">User ID</label>
+                <input 
+                    type="text" 
+                    id="userId" 
+                    class="form-input" 
+                    placeholder="Enter your user ID" 
+                    required 
+                />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    class="form-input" 
+                    placeholder="Enter your password" 
+                    required 
+                />
+            </div>
+
+            <button type="submit" class="btn-login">Login</button>
+        </form>
+
+        <div class="login-footer">
+            <p class="muted">Superuser access only</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('loginForm');
+    
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const userId = document.getElementById('userId').value;
+        const password = document.getElementById('password').value;
+        
+        // Dummy login - just log and redirect
+        console.log('Login attempt (dummy):', { userId, password });
+        
+        // Show brief success message
+        const btn = form.querySelector('.btn-login');
+        btn.textContent = 'Logging in...';
+        btn.disabled = true;
+        
+        // Redirect to dashboard after short delay
+        setTimeout(() => {
+            window.location.href = '../Dashboard/dashboard.html';
+        }, 500);
+    });
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>
