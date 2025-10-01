@@ -86,8 +86,14 @@ body{
 /* Cards & grid */
 .grid{display:grid; gap:16px; grid-template-columns: repeat(12, 1fr);}
 .card{
-  background:var(--panel); border:1px solid var(--line);
-  border-radius:var(--radius); box-shadow:var(--shadow);
+  background:var(--panel); 
+  border:1px solid #e0e1e6;
+  border-radius:var(--radius); 
+  box-shadow:none;
+  transition: border-color 0.2s ease;
+}
+.card:hover{
+  border-color:#d0d1d6;
 }
 .muted{color:var(--muted)}
 
@@ -98,12 +104,12 @@ body{
   gap:20px;
   align-items:center;
   padding:24px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .placeholder-card:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(0,0,0,.1);
+  transform: translateY(-1px);
+  border-color: color-mix(in lab, var(--brand) 30%, var(--line));
 }
 
 .placeholder-icon{
@@ -219,7 +225,8 @@ body{
 .modal-content{
   background: var(--panel);
   border-radius: var(--radius);
-  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;

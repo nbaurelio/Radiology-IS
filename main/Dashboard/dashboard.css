@@ -1,5 +1,5 @@
 :root, [data-theme="light"]{
-  --bg: #f6f7fb;
+  --bg: #f0f1f5;
   --panel: #ffffff;
   --ink: #0f172a;
   --muted: #6b7280;
@@ -85,8 +85,14 @@ body{
 /* Cards & grid */
 .grid{display:grid; gap:16px; grid-template-columns: repeat(12, 1fr);}
 .card{
-  background:var(--panel); border:1px solid var(--line);
-  border-radius:var(--radius); box-shadow:var(--shadow);
+  background:var(--panel); 
+  border:1px solid #e0e1e6;
+  border-radius:var(--radius); 
+  box-shadow:none;
+  transition: border-color 0.2s ease;
+}
+.card:hover{
+  border-color:#d0d1d6;
 }
 .card .hd{padding:16px 16px 8px; border-bottom:1px solid var(--line); font-weight:700}
 .card .bd{padding:16px}
