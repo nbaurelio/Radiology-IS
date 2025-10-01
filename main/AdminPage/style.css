@@ -1,0 +1,217 @@
+:root{
+  --bg: #f6f7fb;
+  --panel: #ffffff;
+  --ink: #0f172a;
+  --muted: #6b7280;
+  --brand: #6d5dfc;
+  --brand-weak: #edeaff;
+  --line: #eef0f4;
+  --shadow: 0 10px 25px rgba(0,0,0,.06);
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0b0d12; --panel:#121620; --ink:#e5e7eb; --muted:#9aa3af;
+    --brand:#8b7bff; --brand-weak:#1b1f2d; --line:#23293a; --shadow: 0 10px 25px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font: 14px/1.45 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+}
+/* Top navbar */
+.topnav{
+  position:sticky; top:0; z-index:50;
+  backdrop-filter:saturate(1.2) blur(10px);
+  background: color-mix(in lab, var(--panel) 85%, transparent);
+  border-bottom:1px solid var(--line);
+}
+.topnav .row{
+  max-width:1200px; margin:auto; display:flex; align-items:center; gap:16px;
+  padding:12px clamp(12px, 2vw, 24px);
+}
+.brand{display:flex; align-items:center; gap:10px; font-weight:700;}
+.brand .logo{
+  width:28px; height:28px; display:grid; place-items:center; border-radius:10px;
+  background: radial-gradient(120% 120% at 20% 20%, var(--brand) 0%, #30e1c7 40%, #ffd166 100%);
+  box-shadow: 0 6px 14px rgba(0,0,0,.12), inset 0 0 0 2px rgba(255,255,255,.25);
+}
+.brand small{display:block; color:var(--muted); font-weight:600; letter-spacing:.2px}
+.spacer{flex:1}
+.actions{display:flex; align-items:center; gap:10px}
+.btn{
+  padding:8px 12px; border:1px solid var(--line); border-radius:10px;
+  background:var(--panel); color:var(--ink);
+}
+.avatar{width:28px; height:28px; border-radius:999px; background:linear-gradient(135deg,#ffd166,#ff7eb6); display:block}
+
+/* Tabbar */
+.tabs{
+  max-width:1200px; margin:0 auto; padding: 0 clamp(12px, 2vw, 24px);
+  display:flex; gap:18px; border-bottom:1px solid var(--line);
+  overflow-x:auto;
+}
+.tab{
+  display:inline-flex; padding:12px 2px; font-weight:600; color:var(--muted);
+  text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent;
+}
+.tab.active{ color:var(--brand); border-bottom-color:var(--brand); }
+
+/* Page container */
+.container{max-width:1200px; margin:20px auto 48px; padding: 0 clamp(12px, 2vw, 24px);}
+
+/* Cards & grid */
+.grid{display:grid; gap:16px; grid-template-columns: repeat(12, 1fr);}
+.card{
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:var(--radius); box-shadow:var(--shadow);
+}
+.card .hd{padding:16px 16px 8px; border-bottom:1px solid var(--line); font-weight:700}
+.card .bd{padding:16px}
+.muted{color:var(--muted)}
+.pill{
+  display:inline-flex; align-items:center; gap:8px; padding:6px 10px;
+  border-radius:999px; background:var(--brand-weak); color:var(--brand);
+  font-weight:600; font-size:12px;
+}
+
+/* Specific layouts */
+.welcome{
+grid-column: span 12;
+display:flex;
+gap:16px;
+align-items:center;
+padding:18px
+}
+
+.welcome .avatar-big{
+  width:56px;
+  height:56px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#8ec5fc,#e0c3fc);
+}
+
+.metrics{
+grid-column: span 12;
+display:grid; gap:16px;
+grid-template-columns:
+repeat(12, 1fr)
+}
+
+.metric{
+grid-column: span 12;
+padding:16px
+}
+
+.metric h4{
+margin:0 0 8px 0;
+font-size:13px;
+color:var(--muted);
+font-weight:600
+}
+
+.metric .val{
+font-size:24px;
+font-weight:800
+}
+
+.mini-chart{
+  margin-top:10px;
+  height:60px;
+  width:100%;
+  background: linear-gradient(180deg, color-mix(in lab, var(--brand) 18%, transparent), transparent 60%),
+              linear-gradient(to right, color-mix(in lab, var(--brand) 25%, transparent), transparent);
+  border-radius:10px;
+  border:1px dashed var(--line);
+}
+
+.overview{
+grid-column: span 12
+}
+
+@media (min-width: 720px){
+  .welcome{ grid-column: span 7 }
+  .metrics{ grid-column: span 12 }
+  .metric{ grid-column: span 4 }
+}
+@media (min-width: 1024px){
+  .welcome{ grid-column: span 12 }
+  .metric{ grid-column: span 3 }
+}
+
+/* Chart & legend */
+.chart{width:100%; height:180px; display:block}
+.legend{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+.dot{width:8px; height:8px; border-radius:999px; background:var(--brand)}
+.dot.alt{background:#16a34a}
+.kpi{display:flex; gap:18px; flex-wrap:wrap}
+.kpi .item{display:flex; flex-direction:column}
+.kpi .item b{font-
+
+/* --- Recent Studies table --- */
+.table-card{ grid-column: span 12; }
+
+.table-wrap{ width:100%; overflow:auto; }
+.tbl{
+  width:100%; border-collapse:collapse; font-size:14px;
+  border-top:1px solid var(--line);
+}
+.tbl thead th{
+  text-align:left; color:var(--muted); font-weight:700;
+  padding:14px 10px; background:transparent; position:sticky; top:0;
+}
+.tbl tbody td{
+  padding:18px 10px; border-top:1px solid var(--line);
+}
+.tbl tr:hover td{ background: color-mix(in lab, var(--panel) 88%, var(--brand-weak) 12%); }
+
+/* Pills for status */
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 12px; border-radius:999px; font-weight:600; font-size:12px;
+}
+.badge-pending{ background:#FEF3C7; color:#92400E; }   /* amber */
+.badge-reading{ background:#D1FAE5; color:#065F46; }   /* teal/green */
+.badge-done{    background:#E5F4FF; color:#1E3A8A; }   /* blue */
+
+/* Gradient action button */
+.btn-grad{
+  display:inline-block; padding:10px 16px; border-radius:12px;
+  background: linear-gradient(135deg, var(--brand), #7a5af8);
+  color:#fff; text-decoration:none; font-weight:700;
+  box-shadow: 0 6px 16px rgba(109,93,252,.25);
+}
+.btn-grad:hover{ filter:saturate(1.1) brightness(1.03); transform: translateY(-1px); }
+.btn-grad:active{ transform: translateY(0); }
+.btn-grad.alt{ background: linear-gradient(135deg, #6366f1, #9333ea); }
+
+.ta-right{ text-align:right; }
+
+/* Mobile: stack to card-like rows */
+@media (max-width: 640px){
+  .tbl thead{ display:none; }
+  .tbl, .tbl tbody, .tbl tr, .tbl td{ display:block; width:100%; }
+  .tbl tr{ border-top:1px solid var(--line); padding:12px 0; }
+  .tbl td{
+    border:none; padding:8px 0;
+    display:flex; justify-content:space-between; gap:12px;
+  }
+  .tbl td::before{
+    content: attr(data-label);
+    color: var(--muted); font-weight:600;
+  }
+}
+
+/* Overview already spans full width */
+.overview{ grid-column: 1 / -1; }
+
+/* Make Recent Studies match exactly */
+.table-card{ grid-column: 1 / -1; }
+
+/* Optional: remove any stray margins so edges line up */
+.table-card, .overview{ margin: 0; }
+
+/* Optional: add data-labels in HTML for perfect mobile labels (see note below) */
+
