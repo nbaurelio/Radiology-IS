@@ -4,9 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Patients - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
     <link rel="stylesheet" href="patients.css">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
 
@@ -86,28 +88,70 @@
 <div class="modal" id="addPatientModal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Create Patient Profile</h2>
+            <div>
+                <h2>Personal info</h2>
+                <p class="modal-subtitle">Basic info about the patient</p>
+            </div>
             <button class="close-btn" id="closeModalBtn">&times;</button>
         </div>
         <div class="modal-body">
             <form id="patientForm">
-                <div class="form-group">
-                    <label for="patientName">Patient Name</label>
-                    <input type="text" id="patientName" class="form-input" placeholder="Enter full name" required />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="firstName" class="form-input" placeholder="Ex: John" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="lastName" class="form-input" placeholder="Ex: Doe" required />
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="patientId">Patient ID</label>
-                    <input type="text" id="patientId" class="form-input" placeholder="Enter patient ID" required />
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="patientId">Patient ID <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">badge</span>
+                            <input type="text" id="patientId" class="form-input" placeholder="Ex: P123456" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactEmail">Contact Email <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">email</span>
+                            <input type="email" id="contactEmail" class="form-input" placeholder="Ex: patient@email.com" required />
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="patientSex">Sex</label>
-                    <select id="patientSex" class="form-input" required>
-                        <option value="">Select sex</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                    </select>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">phone</span>
+                            <input type="tel" id="phoneNumber" class="form-input" placeholder="Ex: +1 555 123 4567" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="patientSex">Sex <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">wc</span>
+                            <select id="patientSex" class="form-input" required>
+                                <option value="">Select sex</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
+
                 <button type="submit" class="btn-create">Create Profile</button>
             </form>
         </div>
@@ -141,12 +185,15 @@
     // Handle form submission (dummy for now)
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const name = document.getElementById('patientName').value;
+        const firstName = document.getElementById('firstName').value;
+        const lastName = document.getElementById('lastName').value;
         const id = document.getElementById('patientId').value;
+        const email = document.getElementById('contactEmail').value;
+        const phone = document.getElementById('phoneNumber').value;
         const sex = document.getElementById('patientSex').value;
         
-        console.log('Patient created (dummy):', { name, id, sex });
-        alert(`Patient profile created!\nName: ${name}\nID: ${id}\nSex: ${sex}`);
+        console.log('Patient created (dummy):', { firstName, lastName, id, email, phone, sex });
+        alert(`Patient profile created!\nName: ${firstName} ${lastName}\nID: ${id}\nEmail: ${email}\nPhone: ${phone}\nSex: ${sex}`);
         
         // Reset form and close modal
         form.reset();
