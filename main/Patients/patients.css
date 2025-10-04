@@ -352,3 +352,111 @@ select.form-input{
     grid-column: span 4;
   }
 }
+
+/* ADD THESE STYLES TO THE END OF YOUR patients.css FILE */
+
+/* Patient count badge in table header */
+.card .hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.patient-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 4px 10px;
+  background: var(--brand-weak);
+  border-radius: 999px;
+}
+
+/* Sex badges */
+.badge-male {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+.badge-female {
+  background: #FCE7F3;
+  color: #BE185D;
+}
+
+.badge-other {
+  background: #F3E8FF;
+  color: #7C3AED;
+}
+
+[data-theme="dark"] .badge-male {
+  background: #1e3a5f;
+  color: #93C5FD;
+}
+
+[data-theme="dark"] .badge-female {
+  background: #4a1e3a;
+  color: #F9A8D4;
+}
+
+[data-theme="dark"] .badge-other {
+  background: #3a1e5f;
+  color: #C4B5FD;
+}
+
+/* Action buttons in table */
+.btn-view,
+.btn-delete {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 6px;
+}
+
+.btn-view {
+  background: linear-gradient(135deg, var(--brand), #7a5af8);
+  color: white;
+  box-shadow: 0 2px 8px rgba(109, 93, 252, 0.2);
+}
+
+.btn-view:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 93, 252, 0.3);
+}
+
+.btn-delete {
+  background: var(--line);
+  color: var(--muted);
+}
+
+.btn-delete:hover {
+  background: #fee;
+  color: #c00;
+}
+
+[data-theme="dark"] .btn-delete:hover {
+  background: #3a1a1a;
+  color: #ff6b6b;
+}
+
+/* Table enhancements */
+.tbl tbody td {
+  vertical-align: middle;
+}
+
+.tbl tbody td strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Responsive table labels */
+@media (max-width: 640px) {
+  .btn-view,
+  .btn-delete {
+    display: inline-block;
+    margin: 4px 4px 4px 0;
+  }
+}

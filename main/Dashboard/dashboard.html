@@ -56,25 +56,25 @@
         <section class="metrics">
             <article class="card metric">
                 <h4>Total Studies</h4>
-                <div class="val">9,374</div>
+                <div class="val" id="totalStudies">-</div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
 
             <article class="card metric">
                 <h4>Pending Reads</h4>
-                <div class="val">24,273.31</div>
+                <div class="val" id="pendingReads">-</div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
 
             <article class="card metric">
-                <h4>Urgent Studies</h4>
-                <div class="val">3,912</div>
+                <h4>Completed Studies</h4>
+                <div class="val" id="completedStudies">-</div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
 
             <article class="card metric">
-                <h4>Active Patients</h4>
-                <div class="val">6,561</div>
+                <h4>Total Patients</h4>
+                <div class="val" id="totalPatients">-</div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
         </section>
@@ -181,6 +181,9 @@
     </section>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="dashboard-auth.js"></script>
 <script src="../shared/theme-toggle.js"></script>
 </body>
 </html>

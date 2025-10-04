@@ -205,3 +205,21 @@ body{
     right: 10px;
   }
 }
+
+/* Add this to your existing login.css file */
+
+.error-message{
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fee;
+  color: #c00;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #fcc;
+}
+
+[data-theme="dark"] .error-message{
+  background: #3a1a1a;
+  color: #ff6b6b;
+  border-color: #5a2a2a;
+}

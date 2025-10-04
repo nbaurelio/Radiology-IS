@@ -43,40 +43,45 @@
 <main class="container">
     <section class="grid">
 
-        <!-- Placeholder Card 1 -->
-        <article class="card placeholder-card">
-            <div class="placeholder-icon" aria-hidden="true">👥</div>
-            <div>
-                <h2 style="margin:.5rem 0 0">Patient Management</h2>
-                <p class="muted" style="margin:.35rem 0 0">View and manage patient records, appointments, and medical history.</p>
-            </div>
-        </article>
-
-        <!-- Placeholder Card 2 -->
-        <article class="card placeholder-card">
-            <div class="placeholder-icon" aria-hidden="true">📋</div>
-            <div>
-                <h2 style="margin:.5rem 0 0">Patient Records</h2>
-                <p class="muted" style="margin:.35rem 0 0">Access comprehensive patient information and medical documentation.</p>
-            </div>
-        </article>
-
-        <!-- Placeholder Card 3 -->
-        <article class="card placeholder-card">
-            <div class="placeholder-icon" aria-hidden="true">🔍</div>
-            <div>
-                <h2 style="margin:.5rem 0 0">Search Patients</h2>
-                <p class="muted" style="margin:.35rem 0 0">Quickly find patient records using advanced search filters.</p>
-            </div>
-        </article>
         <!-- Search and Add Patient Bar -->
         <article class="card search-bar">
             <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search patients by name, ID, or exam type..." />
+                <input type="text" id="searchInput" class="search-input" placeholder="Search patients by name or ID..." />
             </div>
             <button class="add-patient-btn" id="addPatientBtn" aria-label="Add Patient">
                 <span class="plus-icon">+</span>
             </button>
+        </article>
+
+        <!-- Patients Table -->
+        <article class="card table-card">
+            <div class="hd">
+                <span>All Patients</span>
+                <span class="patient-count" id="patientCount">Loading...</span>
+            </div>
+            <div class="bd">
+                <div class="table-wrap">
+                    <table class="tbl">
+                        <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Sex</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="patientsTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:40px; color:var(--muted);">
+                                <div style="font-size:48px; margin-bottom:16px;">📋</div>
+                                Loading patients...
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </article>
 
     </section>
@@ -92,15 +97,15 @@
         <div class="modal-body">
             <form id="patientForm">
                 <div class="form-group">
-                    <label for="patientName">Patient Name</label>
+                    <label for="patientName">Patient Name *</label>
                     <input type="text" id="patientName" class="form-input" placeholder="Enter full name" required />
                 </div>
                 <div class="form-group">
-                    <label for="patientId">Patient ID</label>
+                    <label for="patientId">Patient ID *</label>
                     <input type="text" id="patientId" class="form-input" placeholder="Enter patient ID" required />
                 </div>
                 <div class="form-group">
-                    <label for="patientSex">Sex</label>
+                    <label for="patientSex">Sex *</label>
                     <select id="patientSex" class="form-input" required>
                         <option value="">Select sex</option>
                         <option value="male">Male</option>
@@ -108,52 +113,27 @@
                         <option value="other">Other</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="patientDob">Date of Birth</label>
+                    <input type="date" id="patientDob" class="form-input" />
+                </div>
+                <div class="form-group">
+                    <label for="patientEmail">Email</label>
+                    <input type="email" id="patientEmail" class="form-input" placeholder="patient@example.com" />
+                </div>
+                <div class="form-group">
+                    <label for="patientPhone">Phone</label>
+                    <input type="tel" id="patientPhone" class="form-input" placeholder="+63 XXX XXX XXXX" />
+                </div>
                 <button type="submit" class="btn-create">Create Profile</button>
             </form>
         </div>
     </div>
 </div>
 
-<script>
-    // Modal functionality
-    const modal = document.getElementById('addPatientModal');
-    const addBtn = document.getElementById('addPatientBtn');
-    const closeBtn = document.getElementById('closeModalBtn');
-    const form = document.getElementById('patientForm');
-
-    // Open modal
-    addBtn.addEventListener('click', () => {
-        modal.style.display = 'flex';
-    });
-
-    // Close modal
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    // Close modal when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-
-    // Handle form submission (dummy for now)
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('patientName').value;
-        const id = document.getElementById('patientId').value;
-        const sex = document.getElementById('patientSex').value;
-        
-        console.log('Patient created (dummy):', { name, id, sex });
-        alert(`Patient profile created!\nName: ${name}\nID: ${id}\nSex: ${sex}`);
-        
-        // Reset form and close modal
-        form.reset();
-        modal.style.display = 'none';
-    });
-</script>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="patients-supabase.js"></script>
 <script src="../shared/theme-toggle.js"></script>
 </body>
 </html>
