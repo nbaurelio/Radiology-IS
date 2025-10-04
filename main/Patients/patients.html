@@ -81,6 +81,86 @@
             </button>
         </article>
 
+        <!-- Patients Table Card -->
+        <article class="card table-card table-shell ref-table" id="patientsCard">
+            <div class="table-header">
+                <div class="left">
+                    <h2 class="table-title">Recent Studies</h2>
+                    <span class="muted" id="patientCount">0 records</span>
+                </div>
+                <div class="right">
+                    <select class="toolbar-select" id="statusFilter" aria-label="Filter by status">
+                        <option value="">All statuses</option>
+                        <option>Pending</option>
+                        <option>Reading</option>
+                        <option>Completed</option>
+                    </select>
+                    <button class="btn btn-sm outline" id="exportBtn">Export</button>
+                </div>
+            </div>
+
+            <div class="table-scroll">
+                <table class="table patients-table ref-table__table" aria-label="Patients table">
+                        <thead>
+                        <tr>
+                            <th>Study ID</th>
+                            <th>Patient</th>
+                            <th>Exam Type</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>STU-001</td>
+                            <td>John Doe</td>
+                            <td>Chest X-Ray</td>
+                            <td>2025-09-24</td>
+                            <td>
+                                <span class="badge badge-pending">Pending</span>
+                            </td>
+                            <td>
+                                <a href="#" class="btn-grad">View</a>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>STU-002</td>
+                            <td>Jane Smith</td>
+                            <td>CT Abdomen</td>
+                            <td>2025-09-23</td>
+                            <td>
+                                <span class="badge badge-reading">Reading</span>
+                            </td>
+                            <td>
+                                <a href="#" class="btn-grad">View</a>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>STU-003</td>
+                            <td>Mike Johnson</td>
+                            <td>MRI Brain</td>
+                            <td>2025-09-22</td>
+                            <td>
+                                <span class="badge badge-done">Completed</span>
+                            </td>
+                            <td>
+                                <a href="#" class="btn-grad alt">Report</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="empty-state" id="patientsEmpty" hidden>
+                    <div class="empty-emoji">🗂️</div>
+                    <h3>No studies to show</h3>
+                    <p class="muted">Try adjusting your search or add a new entry.</p>
+                </div>
+            </div>
+        </article>
+
     </section>
 </main>
 
