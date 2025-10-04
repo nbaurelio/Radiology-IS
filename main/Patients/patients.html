@@ -81,26 +81,12 @@
             </button>
         </article>
 
-        <!-- Patients Table Card -->
-        <article class="card table-card table-shell ref-table" id="patientsCard">
-            <div class="table-header">
-                <div class="left">
-                    <h2 class="table-title">Recent Studies</h2>
-                    <span class="muted" id="patientCount">0 records</span>
-                </div>
-                <div class="right">
-                    <select class="toolbar-select" id="statusFilter" aria-label="Filter by status">
-                        <option value="">All statuses</option>
-                        <option>Pending</option>
-                        <option>Reading</option>
-                        <option>Completed</option>
-                    </select>
-                    <button class="btn btn-sm outline" id="exportBtn">Export</button>
-                </div>
-            </div>
-
-            <div class="table-scroll">
-                <table class="table patients-table ref-table__table" aria-label="Patients table">
+        <!-- Recent Studies -->
+        <article class="card table-card">
+            <div class="hd">Recent Studies</div>
+            <div class="bd">
+                <div class="table-wrap">
+                    <table class="tbl">
                         <thead>
                         <tr>
                             <th>Study ID</th>
@@ -150,13 +136,8 @@
                                 <a href="#" class="btn-grad alt">Report</a>
                             </td>
                         </tr>
-                    </tbody>
-                </table>
-
-                <div class="empty-state" id="patientsEmpty" hidden>
-                    <div class="empty-emoji">🗂️</div>
-                    <h3>No studies to show</h3>
-                    <p class="muted">Try adjusting your search or add a new entry.</p>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </article>

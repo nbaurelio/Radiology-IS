@@ -312,6 +312,71 @@ select.form-input{
 /* --- Patients table (same look as dashboard Recent Studies) --- */
 .patients-table-card{ grid-column: 1 / -1; }
 
+/* Ensure table-card spans full width like search bar */
+.table-card{ grid-column: 1 / -1; }
+
+/* Add proper padding to header to align with other cards */
+.table-card .hd{ 
+  padding: 16px 20px 8px 20px; 
+}
+
+/* Remove padding from table body but keep horizontal padding */
+.table-card .bd{ 
+  padding: 0; 
+}
+
+/* Table styling matching dashboard */
+.table-wrap{ width:100%; overflow:auto; }
+
+.tbl{
+  width:100%; 
+  border-collapse:collapse; 
+  font-size:14px;
+  border-top:1px solid var(--line);
+}
+
+.tbl thead th{
+  text-align:left; 
+  color:var(--muted); 
+  font-weight:700;
+  padding:14px 20px; 
+  background:transparent; 
+  position:sticky; 
+  top:0;
+}
+
+.tbl thead th:first-child{
+  padding-left: 20px;
+}
+
+.tbl tbody td{
+  padding:18px 20px; 
+  border-top:1px solid var(--line);
+}
+
+.tbl tbody td:first-child{
+  padding-left: 20px;
+}
+
+.tbl tr:hover td{ 
+  background: color-mix(in lab, var(--panel) 88%, var(--brand-weak) 12%); 
+}
+
+/* Status badges */
+.badge{
+  display:inline-flex; 
+  align-items:center; 
+  gap:6px;
+  padding:6px 12px; 
+  border-radius:999px; 
+  font-weight:600; 
+  font-size:12px;
+}
+
+.badge-pending{ background:#FEF3C7; color:#92400E; }
+.badge-reading{ background:#D1FAE5; color:#065F46; }
+.badge-done{ background:#E5F4FF; color:#1E3A8A; }
+
 .patients-table-wrap{ width:100%; overflow:auto; }
 
 .patients-tbl{
