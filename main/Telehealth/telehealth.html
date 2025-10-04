@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Patients - Radiology IS</title>
+    <title>Telehealth - Radiology IS</title>
     <link rel="stylesheet" href="../shared/common.css">
-    <link rel="stylesheet" href="patients.css">
+    <link rel="stylesheet" href="telehealth.css">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -19,7 +19,7 @@
             <span class="logo"></span>
             <div>
                 Radiology IS
-                <small>Patients</small>
+                <small>Telehealth</small>
             </div>
         </div>
         <div class="spacer"></div>
@@ -35,8 +35,8 @@
         <a class="tab" href="../Dashboard/dashboard.html">Dashboard</a>
         <a class="tab" href="#">Upload DICOM</a>
         <a class="tab" href="#">Reports</a>
-        <a class="tab" href="../Telehealth/telehealth.html">Telehealth</a>
-        <a class="tab active" href="patients.html">Patients</a>
+        <a class="tab active" href="telehealth.html">Telehealth</a>
+        <a class="tab" href="../Patients/patients.html">Patients</a>
     </nav>
 </header>
 
@@ -82,82 +82,97 @@
 
         <!-- Recent Studies -->
         <article class="card table-card">
-            <div class="hd">Patients</div>
+            <div class="hd">Recent Studies</div>
             <div class="bd">
                 <div class="table-wrap">
                     <table class="tbl">
                         <thead>
                         <tr>
-                            <th>Full Name</th>
-                            <th>Patient ID</th>
-                            <th>Age</th>
-                            <th>Sex</th>
-                            <th>Next Appointment</th>
+                            <th>Study ID</th>
+                            <th>Patient</th>
+                            <th>Exam Type</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Assigned Radiologist</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr>
+                            <td>STU-001</td>
                             <td>John Doe</td>
-                            <td>P-2024-001</td>
-                            <td>45</td>
-                            <td>Male</td>
-                            <td>2025-10-15, 10:00 AM</td>
+                            <td>Chest X-Ray</td>
+                            <td>
+                                <span class="badge badge-priority-stat">STAT</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-pending">Pending</span>
+                            </td>
+                            <td>Dr. Sarah Chen</td>
                         </tr>
 
                         <tr>
+                            <td>STU-002</td>
                             <td>Jane Smith</td>
-                            <td>P-2024-002</td>
-                            <td>32</td>
-                            <td>Female</td>
-                            <td>2025-10-08, 2:30 PM</td>
+                            <td>CT Abdomen</td>
+                            <td>
+                                <span class="badge badge-priority-urgent">Urgent</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-reading">Reading</span>
+                            </td>
+                            <td>Dr. Michael Rodriguez</td>
                         </tr>
 
                         <tr>
+                            <td>STU-003</td>
                             <td>Mike Johnson</td>
-                            <td>P-2024-003</td>
-                            <td>58</td>
-                            <td>Male</td>
-                            <td><span class="badge badge-no-appointment">No Appointment</span></td>
+                            <td>MRI Brain</td>
+                            <td>
+                                <span class="badge badge-priority-routine">Routine</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-done">Completed</span>
+                            </td>
+                            <td>Dr. Emily Watson</td>
                         </tr>
 
                         <tr>
+                            <td>STU-004</td>
                             <td>Sarah Williams</td>
-                            <td>P-2024-004</td>
-                            <td>27</td>
-                            <td>Female</td>
-                            <td>2025-10-12, 9:15 AM</td>
+                            <td>Ultrasound Abdomen</td>
+                            <td>
+                                <span class="badge badge-priority-routine">Routine</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-pending">Pending</span>
+                            </td>
+                            <td>Dr. James Park</td>
                         </tr>
 
                         <tr>
+                            <td>STU-005</td>
                             <td>Robert Brown</td>
-                            <td>P-2024-005</td>
-                            <td>41</td>
-                            <td>Male</td>
-                            <td>2025-10-10, 3:45 PM</td>
+                            <td>CT Chest</td>
+                            <td>
+                                <span class="badge badge-priority-urgent">Urgent</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-reading">Reading</span>
+                            </td>
+                            <td>Dr. Sarah Chen</td>
                         </tr>
 
                         <tr>
+                            <td>STU-006</td>
                             <td>Maria Garcia</td>
-                            <td>P-2024-006</td>
-                            <td>36</td>
-                            <td>Female</td>
-                            <td><span class="badge badge-no-appointment">No Appointment</span></td>
-                        </tr>
-
-                        <tr>
-                            <td>David Lee</td>
-                            <td>P-2024-007</td>
-                            <td>52</td>
-                            <td>Male</td>
-                            <td>2025-10-18, 11:30 AM</td>
-                        </tr>
-
-                        <tr>
-                            <td>Emily Chen</td>
-                            <td>P-2024-008</td>
-                            <td>29</td>
-                            <td>Female</td>
-                            <td>2025-10-06, 1:00 PM</td>
+                            <td>X-Ray Spine</td>
+                            <td>
+                                <span class="badge badge-priority-stat">STAT</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-reading">Reading</span>
+                            </td>
+                            <td>Dr. Michael Rodriguez</td>
                         </tr>
                         </tbody>
                     </table>

@@ -1,4 +1,4 @@
-/* ===== PATIENTS PAGE-SPECIFIC STYLES ===== */
+/* ===== TELEHEALTH PAGE-SPECIFIC STYLES ===== */
 
 /* Placeholder cards */
 .placeholder-card{
@@ -309,7 +309,7 @@ select.form-input{
   }
 }
 
-/* --- Patients table (same look as dashboard Recent Studies) --- */
+/* --- Table styling --- */
 .patients-table-card{ grid-column: 1 / -1; }
 
 /* Ensure table-card spans full width like search bar */
@@ -413,59 +413,7 @@ select.form-input{
 .badge-priority-urgent{ background:#FED7AA; color:#9A3412; }    /* Orange - Urgent */
 .badge-priority-routine{ background:#E0E7FF; color:#3730A3; }   /* Indigo - Routine */
 
-/* No appointment badge */
-.badge-no-appointment{ background:#E0E7FF; color:#3730A3; }     /* Indigo - No Appointment */
-
-.patients-table-wrap{ width:100%; overflow:auto; }
-
-.patients-tbl{
-  width:100%;
-  border-collapse:collapse;
-  font-size:14px;
-  border-top:1px solid var(--line);
-}
-
-.patients-tbl thead th{
-  text-align:left;
-  color:var(--muted);
-  font-weight:700;
-  padding:14px 10px;
-  background:transparent;
-  position:sticky;
-  top:0;
-}
-
-.patients-tbl tbody td{
-  padding:18px 10px;
-  border-top:1px solid var(--line);
-}
-
-.patients-tbl tr:hover td{
-  background: color-mix(in lab, var(--panel) 88%, var(--brand-weak) 12%);
-}
-
-/* Status chips (like badges) */
-.chip{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:6px 12px;
-  border-radius:999px;
-  font-weight:600;
-  font-size:12px;
-}
-
-.chip-scheduled,
-.chip-pending{ background:#FEF3C7; color:#92400E; }   /* amber */
-
-.chip-reading{ background:#D1FAE5; color:#065F46; }   /* teal/green */
-
-.chip-completed,
-.chip-done{ background:#E5F4FF; color:#1E3A8A; }   /* blue */
-
-.chip-finalized{ background:#EDE9FE; color:#5B21B6; } /* purple */
-
-/* Gradient action button (reuses dashboard style) */
+/* Gradient action button */
 .btn-grad{
   display:inline-block;
   padding:10px 16px;
@@ -487,27 +435,4 @@ select.form-input{
 
 .btn-grad.alt{
   background: linear-gradient(135deg, #6366f1, #9333ea);
-}
-
-/* Mobile responsive: card-style rows */
-@media (max-width: 640px){
-  .patients-tbl thead{ display:none; }
-  .patients-tbl, .patients-tbl tbody, .patients-tbl tr, .patients-tbl td{
-    display:block;
-    width:100%;
-  }
-  .patients-tbl tr{ border-top:1px solid var(--line); padding:12px 0; }
-  .patients-tbl td{
-    border:none;
-    padding:8px 0;
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-  }
-
-  .patients-tbl td::before{
-    content: attr(data-label);
-    color: var(--muted);
-    font-weight:600;
-  }
 }
