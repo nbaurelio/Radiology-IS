@@ -11,7 +11,6 @@
 </head>
 <body>
 
-<!-- Top navbar -->
 <header class="topnav">
     <div class="row">
         <div class="brand">
@@ -25,12 +24,11 @@
         <div class="actions">
             <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
             <button class="btn">Settings</button>
-            <a href="../Login/login.html" class="btn btn-login-nav">Login</a>
-            <a class="avatar" href="#" aria-label="Profile"></a>
+            <button class="btn" id="logoutBtn">Logout</button>
+            <div class="avatar" id="userAvatar" aria-label="Profile"></div>
         </div>
     </div>
 
-    <!-- Tabs -->
     <nav class="tabs" aria-label="Primary">
         <a class="tab active" href="dashboard.html">Dashboard</a>
         <a class="tab" href="#">Upload DICOM</a>
@@ -40,16 +38,17 @@
     </nav>
 </header>
 
-<!-- Page content -->
 <main class="container">
     <section class="grid">
         <!-- Welcome -->
         <article class="card welcome">
             <div class="avatar-big" aria-hidden="true"></div>
             <div>
-                <div class="pill">Welcome back, User</div>
+                <div class="pill">Welcome back, <span id="userName">User</span></div>
                 <h2 style="margin:.5rem 0 0">Happy to see you again on your dashboard.</h2>
-                <p class="muted" style="margin:.35rem 0 0">Here's a quick snapshot of your performance today.</p>
+                <p class="muted" style="margin:.35rem 0 0">
+                    <span id="userRole">Loading...</span> | Here's a quick snapshot of your performance today.
+                </p>
             </div>
         </article>
 
@@ -57,25 +56,33 @@
         <section class="metrics">
             <article class="card metric">
                 <h4>Total Studies</h4>
-                <div class="val">9,374</div>
+                <div class="val" id="totalStudies">
+                    <div class="skeleton" style="width: 80px; height: 32px;"></div>
+                </div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
 
             <article class="card metric">
                 <h4>Pending Reads</h4>
-                <div class="val">24,273.31</div>
+                <div class="val" id="pendingReads">
+                    <div class="skeleton" style="width: 80px; height: 32px;"></div>
+                </div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
 
             <article class="card metric">
                 <h4>Urgent Studies</h4>
-                <div class="val">3,912</div>
+                <div class="val" id="urgentStudies">
+                    <div class="skeleton" style="width: 80px; height: 32px;"></div>
+                </div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
 
             <article class="card metric">
                 <h4>Active Patients</h4>
-                <div class="val">6,561</div>
+                <div class="val" id="activePatients">
+                    <div class="skeleton" style="width: 80px; height: 32px;"></div>
+                </div>
                 <div class="mini-chart" aria-hidden="true"></div>
             </article>
         </section>
@@ -90,7 +97,6 @@
                     <div class="item"><span class="muted">Average</span><b>$66,561</b></div>
                 </div>
 
-                <!-- Simple SVG line chart placeholder -->
                 <svg class="chart" viewBox="0 0 600 180" role="img" aria-label="Revenue trend">
                     <defs>
                         <linearGradient id="fillA" x1="0" x2="0" y1="0" y2="1">
@@ -99,13 +105,11 @@
                         </linearGradient>
                     </defs>
                     <rect width="600" height="180" fill="none" stroke="var(--line)"/>
-                    <!-- grid lines -->
                     <g stroke="var(--line)" stroke-width="1" opacity=".8">
                         <line x1="0" y1="40" x2="600" y2="40"/>
                         <line x1="0" y1="80" x2="600" y2="80"/>
                         <line x1="0" y1="120" x2="600" y2="120"/>
                     </g>
-                    <!-- area + line -->
                     <path d="M0,130 L30,115 60,128 90,90 120,110 150,85 180,92 210,70 240,80 270,65 300,78 330,60 360,75 390,68 420,82 450,72 480,89 510,95 540,85 570,92 600,88 L600,180 L0,180 Z"
                           fill="url(#fillA)"/>
                     <path d="M0,130 L30,115 60,128 90,90 120,110 150,85 180,92 210,70 240,80 270,65 300,78 330,60 360,75 390,68 420,82 450,72 480,89 510,95 540,85 570,92 600,88"
@@ -121,7 +125,24 @@
 
         <!-- Recent Studies -->
         <article class="card table-card">
-            <div class="hd">Recent Studies</div>
+            <div class="hd" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Recent Studies</span>
+                <div style="display: flex; gap: 8px;">
+                    <select id="statusFilter" class="btn" style="padding: 6px 10px; font-size: 13px;">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="reading">Reading</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                    <select id="priorityFilter" class="btn" style="padding: 6px 10px; font-size: 13px;">
+                        <option value="">All Priority</option>
+                        <option value="routine">Routine</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="stat">STAT</option>
+                    </select>
+                    <button class="btn" id="refreshBtn" style="padding: 6px 12px;">↻ Refresh</button>
+                </div>
+            </div>
             <div class="bd">
                 <div class="table-wrap">
                     <table class="tbl">
@@ -129,49 +150,20 @@
                         <tr>
                             <th>Study ID</th>
                             <th>Patient</th>
+                            <th>Modality</th>
                             <th>Exam Type</th>
                             <th>Date</th>
+                            <th>Priority</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="studiesTableBody">
                         <tr>
-                            <td>STU-001</td>
-                            <td>John Doe</td>
-                            <td>Chest X-Ray</td>
-                            <td>2025-09-24</td>
-                            <td>
-                                <span class="badge badge-pending">Pending</span>
-                            </td>
-                            <td>
-                                <a href="#" class="btn-grad">View</a>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>STU-002</td>
-                            <td>Jane Smith</td>
-                            <td>CT Abdomen</td>
-                            <td>2025-09-23</td>
-                            <td>
-                                <span class="badge badge-reading">Reading</span>
-                            </td>
-                            <td>
-                                <a href="#" class="btn-grad">View</a>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>STU-003</td>
-                            <td>Mike Johnson</td>
-                            <td>MRI Brain</td>
-                            <td>2025-09-22</td>
-                            <td>
-                                <span class="badge badge-done">Completed</span>
-                            </td>
-                            <td>
-                                <a href="#" class="btn-grad alt">Report</a>
+                            <td colspan="8" style="text-align: center; padding: 24px;">
+                                <div class="skeleton" style="width: 100%; height: 20px; margin-bottom: 10px;"></div>
+                                <div class="skeleton" style="width: 100%; height: 20px; margin-bottom: 10px;"></div>
+                                <div class="skeleton" style="width: 100%; height: 20px;"></div>
                             </td>
                         </tr>
                         </tbody>
@@ -181,6 +173,183 @@
         </article>
     </section>
 </main>
+
+<style>
+.skeleton {
+    background: linear-gradient(90deg, var(--line) 25%, var(--bg) 50%, var(--line) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+select.btn {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
+}
+
+#refreshBtn:hover {
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+
+<script>
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    document.getElementById('userName').textContent = currentUser.firstName;
+    document.getElementById('userRole').textContent = currentUser.userType;
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to logout?')) {
+            authService.logout();
+        }
+    });
+
+    // Filters
+    let currentStatusFilter = '';
+    let currentPriorityFilter = '';
+
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+        currentStatusFilter = e.target.value;
+        loadStudies();
+    });
+
+    document.getElementById('priorityFilter').addEventListener('change', (e) => {
+        currentPriorityFilter = e.target.value;
+        loadStudies();
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        loadDashboard();
+    });
+
+    async function loadDashboard() {
+        try {
+            const statsResult = await studyService.getDashboardStats();
+            if (statsResult.success) {
+                document.getElementById('totalStudies').textContent = statsResult.stats.totalStudies.toLocaleString();
+                document.getElementById('pendingReads').textContent = statsResult.stats.pendingReads.toLocaleString();
+                document.getElementById('urgentStudies').textContent = statsResult.stats.urgentStudies.toLocaleString();
+                document.getElementById('activePatients').textContent = statsResult.stats.activePatients.toLocaleString();
+            }
+
+            await loadStudies();
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+        }
+    }
+
+    async function loadStudies() {
+        const tbody = document.getElementById('studiesTableBody');
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px;">Loading studies...</td></tr>';
+
+        try {
+            const studiesResult = await studyService.getRecentStudies(50);
+            
+            if (studiesResult.success) {
+                let studies = studiesResult.studies;
+
+                // Apply filters
+                if (currentStatusFilter) {
+                    studies = studies.filter(s => s.status === currentStatusFilter);
+                }
+                if (currentPriorityFilter) {
+                    studies = studies.filter(s => s.priority === currentPriorityFilter);
+                }
+
+                if (studies.length > 0) {
+                    displayStudies(studies);
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 24px;">
+                                No studies found matching filters.
+                            </td>
+                        </tr>
+                    `;
+                }
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 24px;">
+                            No studies found. Upload DICOM files to get started.
+                        </td>
+                    </tr>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading studies:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 24px; color: #ef4444;">
+                        Error loading data. Please check console for details.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function displayStudies(studies) {
+        const tbody = document.getElementById('studiesTableBody');
+        tbody.innerHTML = studies.map(study => {
+            const patientName = study.patients 
+                ? `${study.patients.first_name || ''} ${study.patients.last_name || ''}`.trim() || 'Unknown'
+                : 'Unknown Patient';
+            
+            const studyDate = study.study_date 
+                ? new Date(study.study_date).toLocaleDateString()
+                : new Date(study.created_at).toLocaleDateString();
+
+            const priorityClass = study.priority === 'stat' ? 'badge-pending' : 
+                                 study.priority === 'urgent' ? 'badge-reading' : 'badge-done';
+            
+            const statusClass = study.status === 'pending' ? 'badge-pending' :
+                               study.status === 'reading' ? 'badge-reading' : 'badge-done';
+
+            return `
+                <tr>
+                    <td data-label="Study ID">${study.study_id || 'N/A'}</td>
+                    <td data-label="Patient">
+                        <a href="../Patients/patient-detail.html?id=${study.patient_id}" 
+                           style="color: var(--brand); text-decoration: none;">
+                            ${patientName}
+                        </a>
+                    </td>
+                    <td data-label="Modality">${study.modality || 'N/A'}</td>
+                    <td data-label="Exam Type">${study.exam_type || 'N/A'}</td>
+                    <td data-label="Date">${studyDate}</td>
+                    <td data-label="Priority">
+                        <span class="badge ${priorityClass}">${(study.priority || 'routine').toUpperCase()}</span>
+                    </td>
+                    <td data-label="Status">
+                        <span class="badge ${statusClass}">${(study.status || 'pending').toUpperCase()}</span>
+                    </td>
+                    <td data-label="Actions">
+                        <a href="#" class="btn-grad" onclick="alert('Study viewer coming soon!'); return false;">View</a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    loadDashboard();
+</script>
 
 <script src="../shared/theme-toggle.js"></script>
 </body>

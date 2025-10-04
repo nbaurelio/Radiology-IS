@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Patient Details - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
+    <link rel="stylesheet" href="patients.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="topnav">
+    <div class="row">
+        <div class="brand">
+            <span class="logo"></span>
+            <div>
+                Radiology IS
+                <small>Patient Details</small>
+            </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="actions">
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
+            <button class="btn">Settings</button>
+            <button class="btn" id="logoutBtn">Logout</button>
+            <div class="avatar" aria-label="Profile"></div>
+        </div>
+    </div>
+
+    <nav class="tabs" aria-label="Primary">
+        <a class="tab" href="../Dashboard/dashboard.html">Dashboard</a>
+        <a class="tab" href="#">Upload DICOM</a>
+        <a class="tab" href="#">Reports</a>
+        <a class="tab" href="#">Telehealth</a>
+        <a class="tab active" href="patients.html">Patients</a>
+    </nav>
+</header>
+
+<main class="container">
+    <div style="margin-bottom: 20px;">
+        <a href="patients.html" class="btn" style="text-decoration: none;">← Back to Patients</a>
+    </div>
+
+    <section class="grid">
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Patient Information</div>
+            <div class="bd">
+                <div id="patientDetailContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading patient details...</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Appointments Section -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Appointments</div>
+            <div class="bd">
+                <div id="appointmentsContent">
+                    <p style="text-align: center; color: var(--muted); padding: 20px;">Loading appointments...</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Studies History -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Studies History</div>
+            <div class="bd">
+                <div id="studiesContent">
+                    <p style="text-align: center; color: var(--muted); padding: 20px;">Loading studies...</p>
+                </div>
+            </div>
+        </article>
+    </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+
+<script>
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to logout?')) {
+            authService.logout();
+        }
+    });
+
+    // Get patient ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const patientId = urlParams.get('id');
+
+    if (!patientId) {
+        window.location.href = 'patients.html';
+    }
+
+    async function loadPatientDetails() {
+        const result = await patientDetailService.getPatientDetail(patientId);
+        
+        if (result.success) {
+            displayPatientInfo(result.patient);
+            displayAppointments(result.appointments);
+            displayStudies(result.studies);
+        } else {
+            document.getElementById('patientDetailContent').innerHTML = 
+                `<p style="color: #ef4444; text-align: center;">Error loading patient details</p>`;
+        }
+    }
+
+    function displayPatientInfo(patient) {
+        const content = document.getElementById('patientDetailContent');
+        const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.name;
+        
+        content.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600; width: 30%;">Patient ID</td>
+                    <td style="padding: 12px;">${patient.patient_id || 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Medical Record Number (MRN)</td>
+                    <td style="padding: 12px;">${patient.mrn || 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Full Name</td>
+                    <td style="padding: 12px;">${fullName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Date of Birth</td>
+                    <td style="padding: 12px;">${patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Sex</td>
+                    <td style="padding: 12px;">${patient.sex ? patient.sex.charAt(0).toUpperCase() + patient.sex.slice(1) : 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Contact Information</td>
+                    <td style="padding: 12px;">
+                        ${patient.phone ? `Phone: ${patient.phone}<br>` : ''}
+                        ${patient.email ? `Email: ${patient.email}` : 'N/A'}
+                    </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Address</td>
+                    <td style="padding: 12px;">${patient.address || 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Medical History Summary</td>
+                    <td style="padding: 12px;">${patient.medical_history || 'No medical history recorded'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Registration Date</td>
+                    <td style="padding: 12px;">${patient.registration_date ? new Date(patient.registration_date).toLocaleDateString() : 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; font-weight: 600;">Last Visit / Last Study</td>
+                    <td style="padding: 12px;">${patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString() : 'No visits recorded'}</td>
+                </tr>
+            </table>
+        `;
+    }
+
+    function displayAppointments(appointments) {
+        const content = document.getElementById('appointmentsContent');
+        
+        if (appointments.length === 0) {
+            content.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--muted);">No appointments scheduled</p>';
+            return;
+        }
+
+        const appointmentsList = appointments.map(apt => {
+            const date = new Date(apt.appointment_date).toLocaleString();
+            const statusClass = apt.status === 'scheduled' ? 'badge-pending' : 
+                               apt.status === 'completed' ? 'badge-done' : 'badge-reading';
+            
+            return `
+                <div style="padding: 16px; border-bottom: 1px solid var(--line);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${apt.exam_type}</strong><br>
+                            <span style="color: var(--muted); font-size: 14px;">${date}</span>
+                        </div>
+                        <span class="badge ${statusClass}">${apt.status.toUpperCase()}</span>
+                    </div>
+                    ${apt.notes ? `<p style="margin-top: 8px; font-size: 14px; color: var(--muted);">${apt.notes}</p>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        content.innerHTML = appointmentsList;
+    }
+
+    function displayStudies(studies) {
+        const content = document.getElementById('studiesContent');
+        
+        if (studies.length === 0) {
+            content.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--muted);">No studies found</p>';
+            return;
+        }
+
+        const studiesList = studies.map(study => {
+            const date = study.study_date ? new Date(study.study_date).toLocaleDateString() : 'N/A';
+            const statusClass = study.status === 'pending' ? 'badge-pending' : 
+                               study.status === 'reading' ? 'badge-reading' : 'badge-done';
+            
+            return `
+                <div style="padding: 16px; border-bottom: 1px solid var(--line);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${study.study_id}</strong> - ${study.exam_type || 'N/A'}<br>
+                            <span style="color: var(--muted); font-size: 14px;">Date: ${date} | Modality: ${study.modality || 'N/A'}</span>
+                        </div>
+                        <span class="badge ${statusClass}">${(study.status || 'pending').toUpperCase()}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        content.innerHTML = studiesList;
+    }
+
+    loadPatientDetails();
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>

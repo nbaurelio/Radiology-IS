@@ -26,8 +26,8 @@
         <div class="actions">
             <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
             <button class="btn">Settings</button>
-            <a href="../Login/login.html" class="btn btn-login-nav">Login</a>
-            <a class="avatar" href="#" aria-label="Profile"></a>
+            <button class="btn" id="logoutBtn">Logout</button>
+            <div class="avatar" href="#" aria-label="Profile"></div>
         </div>
     </div>
 
@@ -45,40 +45,40 @@
 <main class="container">
     <section class="grid">
 
-        <!-- Placeholder Card 1 -->
-        <article class="card placeholder-card">
-            <div class="placeholder-icon" aria-hidden="true">👥</div>
-            <div>
-                <h2 style="margin:.5rem 0 0">Patient Management</h2>
-                <p class="muted" style="margin:.35rem 0 0">View and manage patient records, appointments, and medical history.</p>
-            </div>
-        </article>
-
-        <!-- Placeholder Card 2 -->
-        <article class="card placeholder-card">
-            <div class="placeholder-icon" aria-hidden="true">📋</div>
-            <div>
-                <h2 style="margin:.5rem 0 0">Patient Records</h2>
-                <p class="muted" style="margin:.35rem 0 0">Access comprehensive patient information and medical documentation.</p>
-            </div>
-        </article>
-
-        <!-- Placeholder Card 3 -->
-        <article class="card placeholder-card">
-            <div class="placeholder-icon" aria-hidden="true">🔍</div>
-            <div>
-                <h2 style="margin:.5rem 0 0">Search Patients</h2>
-                <p class="muted" style="margin:.35rem 0 0">Quickly find patient records using advanced search filters.</p>
-            </div>
-        </article>
         <!-- Search and Add Patient Bar -->
         <article class="card search-bar">
             <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search patients by name, ID, or exam type..." />
+                <input type="text" class="search-input" id="searchInput" placeholder="Search patients by name, ID, or exam type..." />
             </div>
             <button class="add-patient-btn" id="addPatientBtn" aria-label="Add Patient">
                 <span class="plus-icon">+</span>
             </button>
+        </article>
+
+        <!-- Patients List -->
+        <article class="card table-card">
+            <div class="hd">Patient Records (<span id="patientCount">0</span>)</div>
+            <div class="bd">
+                <div class="table-wrap">
+                    <table class="tbl">
+                        <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Sex</th>
+                            <th>Date of Birth</th>
+                            <th>Contact</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="patientsTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 24px;">Loading patients...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </article>
 
     </section>
@@ -118,14 +118,14 @@
                         <label for="patientId">Patient ID <span class="required">*</span></label>
                         <div class="input-with-icon">
                             <span class="material-icons input-icon">badge</span>
-                            <input type="text" id="patientId" class="form-input" placeholder="Ex: P123456" required />
+                            <input type="text" id="patientId" class="form-input" placeholder="Ex: PAT-004" required />
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="contactEmail">Contact Email <span class="required">*</span></label>
+                        <label for="contactEmail">Contact Email</label>
                         <div class="input-with-icon">
                             <span class="material-icons input-icon">email</span>
-                            <input type="email" id="contactEmail" class="form-input" placeholder="Ex: patient@email.com" required />
+                            <input type="email" id="contactEmail" class="form-input" placeholder="Ex: patient@email.com" />
                         </div>
                     </div>
                 </div>
@@ -152,22 +152,58 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-create">Create Profile</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">cake</span>
+                            <input type="date" id="dateOfBirth" class="form-input" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">home</span>
+                            <input type="text" id="address" class="form-input" placeholder="Ex: 123 Main St" />
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-create" id="submitBtn">Create Profile</button>
             </form>
         </div>
     </div>
 </div>
 
+<!-- Load Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+
 <script>
+    // Check if user is logged in
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    // Logout functionality
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to logout?')) {
+            authService.logout();
+        }
+    });
+
     // Modal functionality
     const modal = document.getElementById('addPatientModal');
     const addBtn = document.getElementById('addPatientBtn');
     const closeBtn = document.getElementById('closeModalBtn');
     const form = document.getElementById('patientForm');
+    const searchInput = document.getElementById('searchInput');
 
     // Open modal
     addBtn.addEventListener('click', () => {
         modal.style.display = 'flex';
+        form.reset();
     });
 
     // Close modal
@@ -182,23 +218,147 @@
         }
     });
 
-    // Handle form submission (dummy for now)
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const firstName = document.getElementById('firstName').value;
-        const lastName = document.getElementById('lastName').value;
-        const id = document.getElementById('patientId').value;
-        const email = document.getElementById('contactEmail').value;
-        const phone = document.getElementById('phoneNumber').value;
-        const sex = document.getElementById('patientSex').value;
+    // Load patients
+    async function loadPatients() {
+        try {
+            const result = await patientService.getAllPatients();
+            if (result.success) {
+                displayPatients(result.patients);
+                document.getElementById('patientCount').textContent = result.patients.length;
+            } else {
+                document.getElementById('patientsTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+                            Error loading patients: ${result.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading patients:', error);
+            document.getElementById('patientsTableBody').innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+                        Error loading patients. Check console for details.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function displayPatients(patients) {
+        const tbody = document.getElementById('patientsTableBody');
         
-        console.log('Patient created (dummy):', { firstName, lastName, id, email, phone, sex });
-        alert(`Patient profile created!\nName: ${firstName} ${lastName}\nID: ${id}\nEmail: ${email}\nPhone: ${phone}\nSex: ${sex}`);
-        
-        // Reset form and close modal
-        form.reset();
-        modal.style.display = 'none';
+        if (patients.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 24px;">
+                        No patients found. Click + to add a new patient.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = patients.map(patient => {
+            const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.name || 'Unknown';
+            
+            // Format date consistently
+            const dob = patient.date_of_birth 
+                ? new Date(patient.date_of_birth).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit' 
+                  })
+                : 'N/A';
+            
+            // Better contact display
+            let contactDisplay = '';
+            if (patient.phone && patient.email) {
+                contactDisplay = `${patient.phone}<br><small style="color: var(--muted);">${patient.email}</small>`;
+            } else if (patient.phone) {
+                contactDisplay = patient.phone;
+            } else if (patient.email) {
+                contactDisplay = patient.email;
+            } else {
+                contactDisplay = 'N/A';
+            }
+            
+            return `
+                <tr>
+                    <td data-label="Patient ID">${patient.patient_id || 'N/A'}</td>
+                    <td data-label="Name">${fullName}</td>
+                    <td data-label="Sex">${(patient.sex || 'N/A').charAt(0).toUpperCase() + (patient.sex || 'N/A').slice(1)}</td>
+                    <td data-label="Date of Birth">${dob}</td>
+                    <td data-label="Contact">${contactDisplay}</td>
+                    <td data-label="Actions">
+                        <a href="patient-detail.html?id=${patient.id}" class="btn-grad">View</a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Search functionality
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                const result = await patientService.searchPatients(searchTerm);
+                if (result.success) {
+                    displayPatients(result.patients);
+                    document.getElementById('patientCount').textContent = result.patients.length;
+                }
+            } else {
+                loadPatients();
+            }
+        }, 300);
     });
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.textContent = 'Creating...';
+        submitBtn.disabled = true;
+        
+        const patientData = {
+            patient_id: document.getElementById('patientId').value.trim(),
+            first_name: document.getElementById('firstName').value.trim(),
+            last_name: document.getElementById('lastName').value.trim(),
+            email: document.getElementById('contactEmail').value.trim() || null,
+            phone: document.getElementById('phoneNumber').value.trim(),
+            sex: document.getElementById('patientSex').value,
+            date_of_birth: document.getElementById('dateOfBirth').value || null,
+            address: document.getElementById('address').value.trim() || null,
+            name: `${document.getElementById('firstName').value.trim()} ${document.getElementById('lastName').value.trim()}`
+        };
+        
+        try {
+            const result = await patientService.createPatient(patientData);
+            
+            if (result.success) {
+                alert(`Patient profile created successfully!\n\nPatient ID: ${patientData.patient_id}\nName: ${patientData.first_name} ${patientData.last_name}`);
+                form.reset();
+                modal.style.display = 'none';
+                loadPatients();
+            } else {
+                alert(`Error creating patient: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Error creating patient:', error);
+            alert('An error occurred. Please try again.');
+        } finally {
+            submitBtn.textContent = 'Create Profile';
+            submitBtn.disabled = false;
+        }
+    });
+
+    // Load patients on page load
+    loadPatients();
 </script>
 
 <script src="../shared/theme-toggle.js"></script>
