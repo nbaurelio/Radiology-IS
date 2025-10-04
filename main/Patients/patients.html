@@ -92,9 +92,9 @@
                             <th>Study ID</th>
                             <th>Patient</th>
                             <th>Exam Type</th>
-                            <th>Date</th>
+                            <th>Priority</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th>Assigned Radiologist</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -102,39 +102,78 @@
                             <td>STU-001</td>
                             <td>John Doe</td>
                             <td>Chest X-Ray</td>
-                            <td>2025-09-24</td>
+                            <td>
+                                <span class="badge badge-priority-stat">STAT</span>
+                            </td>
                             <td>
                                 <span class="badge badge-pending">Pending</span>
                             </td>
-                            <td>
-                                <a href="#" class="btn-grad">View</a>
-                            </td>
+                            <td>Dr. Sarah Chen</td>
                         </tr>
 
                         <tr>
                             <td>STU-002</td>
                             <td>Jane Smith</td>
                             <td>CT Abdomen</td>
-                            <td>2025-09-23</td>
+                            <td>
+                                <span class="badge badge-priority-urgent">Urgent</span>
+                            </td>
                             <td>
                                 <span class="badge badge-reading">Reading</span>
                             </td>
-                            <td>
-                                <a href="#" class="btn-grad">View</a>
-                            </td>
+                            <td>Dr. Michael Rodriguez</td>
                         </tr>
 
                         <tr>
                             <td>STU-003</td>
                             <td>Mike Johnson</td>
                             <td>MRI Brain</td>
-                            <td>2025-09-22</td>
+                            <td>
+                                <span class="badge badge-priority-routine">Routine</span>
+                            </td>
                             <td>
                                 <span class="badge badge-done">Completed</span>
                             </td>
+                            <td>Dr. Emily Watson</td>
+                        </tr>
+
+                        <tr>
+                            <td>STU-004</td>
+                            <td>Sarah Williams</td>
+                            <td>Ultrasound Abdomen</td>
                             <td>
-                                <a href="#" class="btn-grad alt">Report</a>
+                                <span class="badge badge-priority-routine">Routine</span>
                             </td>
+                            <td>
+                                <span class="badge badge-pending">Pending</span>
+                            </td>
+                            <td>Dr. James Park</td>
+                        </tr>
+
+                        <tr>
+                            <td>STU-005</td>
+                            <td>Robert Brown</td>
+                            <td>CT Chest</td>
+                            <td>
+                                <span class="badge badge-priority-urgent">Urgent</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-reading">Reading</span>
+                            </td>
+                            <td>Dr. Sarah Chen</td>
+                        </tr>
+
+                        <tr>
+                            <td>STU-006</td>
+                            <td>Maria Garcia</td>
+                            <td>X-Ray Spine</td>
+                            <td>
+                                <span class="badge badge-priority-stat">STAT</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-reading">Reading</span>
+                            </td>
+                            <td>Dr. Michael Rodriguez</td>
                         </tr>
                         </tbody>
                     </table>

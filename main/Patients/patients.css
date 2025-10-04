@@ -326,11 +326,15 @@ select.form-input{
 }
 
 /* Table styling matching dashboard */
-.table-wrap{ width:100%; overflow:auto; }
+.table-wrap{ 
+  width:100%; 
+  overflow:auto; 
+}
 
 .tbl{
   width:100%; 
-  border-collapse:collapse; 
+  border-collapse:separate;
+  border-spacing: 0;
   font-size:14px;
   border-top:1px solid var(--line);
 }
@@ -352,14 +356,41 @@ select.form-input{
 .tbl tbody td{
   padding:18px 20px; 
   border-top:1px solid var(--line);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tbl tbody td:first-child{
   padding-left: 20px;
 }
 
-.tbl tr:hover td{ 
-  background: color-mix(in lab, var(--panel) 88%, var(--brand-weak) 12%); 
+.tbl tbody tr{ 
+  cursor: pointer;
+}
+
+.tbl tbody tr:hover td{ 
+  background: color-mix(in lab, var(--brand) 12%, var(--panel));
+}
+
+.tbl tbody tr:hover td:first-child{ 
+  box-shadow: inset 4px 0 0 0 var(--brand);
+}
+
+.tbl tbody tr:hover {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 16px rgba(109, 93, 252, 0.2);
+}
+
+.tbl tbody tr:active td{
+  background: color-mix(in lab, var(--brand) 18%, var(--panel));
+}
+
+.tbl tbody tr:active td:first-child{
+  box-shadow: inset 4px 0 0 0 var(--brand);
+}
+
+.tbl tbody tr:active {
+  box-shadow: 0 2px 8px rgba(109, 93, 252, 0.15);
 }
 
 /* Status badges */
@@ -376,6 +407,11 @@ select.form-input{
 .badge-pending{ background:#FEF3C7; color:#92400E; }
 .badge-reading{ background:#D1FAE5; color:#065F46; }
 .badge-done{ background:#E5F4FF; color:#1E3A8A; }
+
+/* Priority badges */
+.badge-priority-stat{ background:#FEE2E2; color:#991B1B; }      /* Red - Critical */
+.badge-priority-urgent{ background:#FED7AA; color:#9A3412; }    /* Orange - Urgent */
+.badge-priority-routine{ background:#E0E7FF; color:#3730A3; }   /* Indigo - Routine */
 
 .patients-table-wrap{ width:100%; overflow:auto; }
 
