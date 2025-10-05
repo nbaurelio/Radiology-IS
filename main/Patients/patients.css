@@ -308,3 +308,122 @@ select.form-input{
     grid-column: span 4;
   }
 }
+
+/* Table styling matching reference design */
+.table-card{ 
+  grid-column: 1 / -1; 
+}
+
+.table-card .hd{
+  padding: 16px 20px 8px 20px;
+}
+
+.table-card .bd{
+  padding: 0;
+}
+
+.table-wrap{
+  width:100%;
+  overflow:auto;
+}
+
+.tbl{
+  width:100%;
+  border-collapse:separate;
+  border-spacing: 0;
+  font-size:14px;
+  border-top:1px solid var(--line);
+}
+
+.tbl thead th{
+  text-align:left;
+  color:var(--muted);
+  font-weight:700;
+  padding:14px 20px;
+  background:transparent;
+  position:sticky;
+  top:0;
+}
+
+.tbl thead th:first-child{
+  padding-left: 20px;
+}
+
+.tbl tbody td{
+  padding:18px 20px;
+  border-top:1px solid var(--line);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tbl tbody td:first-child{
+  padding-left: 20px;
+}
+
+.tbl tbody tr{
+  cursor: pointer;
+}
+
+.tbl tbody tr:hover td{
+  background: color-mix(in lab, var(--brand) 12%, var(--panel));
+}
+
+.tbl tbody tr:hover td:first-child{
+  box-shadow: inset 4px 0 0 0 var(--brand);
+}
+
+.tbl tbody tr:hover {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 16px rgba(109, 93, 252, 0.2);
+}
+
+.tbl tbody tr:active td{
+  background: color-mix(in lab, var(--brand) 18%, var(--panel));
+}
+
+.tbl tbody tr:active td:first-child{
+  box-shadow: inset 4px 0 0 0 var(--brand);
+}
+
+.tbl tbody tr:active {
+  box-shadow: 0 2px 8px rgba(109, 93, 252, 0.15);
+}
+
+/* Status badges */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 12px;
+  border-radius:999px;
+  font-weight:600;
+  font-size:12px;
+}
+
+.badge-no-appointment{ 
+  background:#E0E7FF; 
+  color:#3730A3; 
+}
+
+/* Mobile responsive: card-style rows */
+@media (max-width: 640px){
+  .tbl thead{ display:none; }
+  .tbl, .tbl tbody, .tbl tr, .tbl td{
+    display:block;
+    width:100%;
+  }
+  .tbl tr{ border-top:1px solid var(--line); padding:12px 0; }
+  .tbl td{
+    border:none;
+    padding:8px 0;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+  }
+
+  .tbl td::before{
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight:600;
+  }
+}

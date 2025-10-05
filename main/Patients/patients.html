@@ -66,14 +66,13 @@
                             <th>Patient ID</th>
                             <th>Name</th>
                             <th>Sex</th>
-                            <th>Date of Birth</th>
+                            <th>Next Appointment</th>
                             <th>Contact</th>
-                            <th>Actions</th>
                         </tr>
                         </thead>
                         <tbody id="patientsTableBody">
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 24px;">Loading patients...</td>
+                            <td colspan="5" style="text-align: center; padding: 24px;">Loading patients...</td>
                         </tr>
                         </tbody>
                     </table>
@@ -228,7 +227,7 @@
             } else {
                 document.getElementById('patientsTableBody').innerHTML = `
                     <tr>
-                        <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+                        <td colspan="5" style="text-align: center; padding: 24px; color: #ef4444;">
                             Error loading patients: ${result.message}
                         </td>
                     </tr>
@@ -238,7 +237,7 @@
             console.error('Error loading patients:', error);
             document.getElementById('patientsTableBody').innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+                    <td colspan="5" style="text-align: center; padding: 24px; color: #ef4444;">
                         Error loading patients. Check console for details.
                     </td>
                 </tr>
@@ -252,7 +251,7 @@
         if (patients.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 24px;">
+                    <td colspan="5" style="text-align: center; padding: 24px;">
                         No patients found. Click + to add a new patient.
                     </td>
                 </tr>
@@ -262,15 +261,6 @@
 
         tbody.innerHTML = patients.map(patient => {
             const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.name || 'Unknown';
-            
-            // Format date consistently
-            const dob = patient.date_of_birth 
-                ? new Date(patient.date_of_birth).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit' 
-                  })
-                : 'N/A';
             
             // Better contact display
             let contactDisplay = '';
@@ -284,16 +274,21 @@
                 contactDisplay = 'N/A';
             }
             
+            // Format next appointment
+            let appointmentDisplay = '';
+            if (patient.next_appointment) {
+                appointmentDisplay = patient.next_appointment;
+            } else {
+                appointmentDisplay = '<span class="badge badge-no-appointment">No Appointment</span>';
+            }
+            
             return `
-                <tr>
+                <tr onclick="window.location.href='patient-detail.html?id=${patient.id}'">
                     <td data-label="Patient ID">${patient.patient_id || 'N/A'}</td>
                     <td data-label="Name">${fullName}</td>
                     <td data-label="Sex">${(patient.sex || 'N/A').charAt(0).toUpperCase() + (patient.sex || 'N/A').slice(1)}</td>
-                    <td data-label="Date of Birth">${dob}</td>
+                    <td data-label="Next Appointment">${appointmentDisplay}</td>
                     <td data-label="Contact">${contactDisplay}</td>
-                    <td data-label="Actions">
-                        <a href="patient-detail.html?id=${patient.id}" class="btn-grad">View</a>
-                    </td>
                 </tr>
             `;
         }).join('');
