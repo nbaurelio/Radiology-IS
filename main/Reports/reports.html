@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Reports - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
+    <link rel="stylesheet" href="reports.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+<!-- Header will be injected here -->
+<div id="header-container"></div>
+
+<!-- Page content -->
+<main class="container">
+    <section class="grid">
+
+        <!-- Search and Add Report Bar -->
+        <article class="card search-bar">
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search reports by patient, study, or radiologist..." />
+            </div>
+            <button class="add-patient-btn" id="addReportBtn" aria-label="Add Report">
+                <span class="plus-icon">+</span>
+            </button>
+        </article>
+
+        <!-- Reports List -->
+        <article class="card table-card">
+            <div class="hd">Radiology Reports (<span id="reportCount">0</span>)</div>
+            <div class="bd">
+                <div class="table-wrap">
+                    <table class="tbl">
+                        <thead>
+                        <tr>
+                            <th>Study ID</th>
+                            <th>Patient</th>
+                            <th>Exam Type</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Assigned Radiologist</th>
+                        </tr>
+                        </thead>
+                        <tbody id="reportsTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 24px;">Loading reports...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </article>
+
+    </section>
+</main>
+
+<!-- Add Report Modal -->
+<div class="modal" id="addReportModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div>
+                <h2>Create Report</h2>
+                <p class="modal-subtitle">Add a new radiology report</p>
+            </div>
+            <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="reportForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="studyId">Study ID <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">description</span>
+                            <input type="text" id="studyId" class="form-input" placeholder="Ex: STU-001" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="patientName">Patient <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="patientName" class="form-input" placeholder="Ex: John Doe" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="examType">Exam Type <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">medical_services</span>
+                            <select id="examType" class="form-input" required>
+                                <option value="">Select exam type</option>
+                                <option value="xray">X-Ray</option>
+                                <option value="ct">CT Scan</option>
+                                <option value="mri">MRI</option>
+                                <option value="ultrasound">Ultrasound</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">Priority <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">priority_high</span>
+                            <select id="priority" class="form-input" required>
+                                <option value="">Select priority</option>
+                                <option value="routine">Routine</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="stat">STAT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="status">Status <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">info</span>
+                            <select id="status" class="form-input" required>
+                                <option value="">Select status</option>
+                                <option value="pending">Pending</option>
+                                <option value="reading">Reading</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="radiologist">Assigned Radiologist <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="radiologist" class="form-input" placeholder="Ex: Dr. Smith" required />
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-create" id="submitBtn">Create Report</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Load Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="../shared/header.js"></script>
+
+<script>
+    // Check if user is logged in
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    // Initialize header with smooth animations
+    headerComponent.initialize('reports');
+
+    // Modal functionality
+    const modal = document.getElementById('addReportModal');
+    const addBtn = document.getElementById('addReportBtn');
+    const closeBtn = document.getElementById('closeModalBtn');
+    const form = document.getElementById('reportForm');
+    const searchInput = document.getElementById('searchInput');
+
+    // Open modal
+    addBtn.addEventListener('click', () => {
+        modal.style.display = 'flex';
+        form.reset();
+    });
+
+    // Close modal
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // Load reports
+    async function loadReports() {
+        const tbody = document.getElementById('reportsTableBody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px;">Loading reports...</td></tr>';
+
+        try {
+            const result = await reportService.getAllReports();
+            
+            if (result.success && result.reports.length > 0) {
+                displayReports(result.reports);
+                document.getElementById('reportCount').textContent = result.reports.length;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 24px;">
+                            No reports found. Click + to add a new report.
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('reportCount').textContent = '0';
+            }
+        } catch (error) {
+            console.error('Error loading reports:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+                        Error loading reports. Check console for details.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Display reports in table
+    function displayReports(reports) {
+        const tbody = document.getElementById('reportsTableBody');
+        tbody.innerHTML = reports.map(report => {
+            const patientName = report.name || 'Unknown Patient';
+            const radiologistName = report.assigned_radiologist || 'Unassigned';
+
+            const priorityClass = report.priority === 'stat' ? 'badge-priority-stat' : 
+                                 report.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine';
+            
+            const statusClass = report.status === 'pending' ? 'badge-pending' :
+                               report.status === 'reading' ? 'badge-reading' : 'badge-done';
+
+            // Format priority: STAT in all caps, others capitalized
+            const priorityText = report.priority === 'stat' ? 'STAT' : 
+                                (report.priority || 'routine').charAt(0).toUpperCase() + (report.priority || 'routine').slice(1).toLowerCase();
+            
+            // Format status: capitalize first letter only
+            const statusText = (report.status || 'pending').charAt(0).toUpperCase() + (report.status || 'pending').slice(1).toLowerCase();
+
+            return `
+                <tr onclick="window.location.href='report-detail.html?id=${report.id}'" style="cursor: pointer;">
+                    <td data-label="Study ID">${report.study_id || 'N/A'}</td>
+                    <td data-label="Patient">${patientName}</td>
+                    <td data-label="Exam Type">${report.exam_type || 'N/A'}</td>
+                    <td data-label="Priority">
+                        <span class="badge ${priorityClass}">${priorityText}</span>
+                    </td>
+                    <td data-label="Status">
+                        <span class="badge ${statusClass}">${statusText}</span>
+                    </td>
+                    <td data-label="Assigned Radiologist">${radiologistName}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Search functionality
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                const result = await reportService.searchReports(searchTerm);
+                if (result.success) {
+                    displayReports(result.reports);
+                    document.getElementById('reportCount').textContent = result.reports.length;
+                }
+            } else {
+                loadReports();
+            }
+        }, 300);
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.textContent = 'Creating...';
+        submitBtn.disabled = true;
+        
+        const reportData = {
+            study_id: document.getElementById('studyId').value.trim(),
+            name: document.getElementById('patientName').value.trim(),
+            exam_type: document.getElementById('examType').value,
+            priority: document.getElementById('priority').value,
+            status: document.getElementById('status').value,
+            assigned_radiologist: document.getElementById('radiologist').value.trim(),
+            created_at: new Date().toISOString()
+        };
+        
+        try {
+            const result = await reportService.createReport(reportData);
+            
+            if (result.success) {
+                alert(`Report created successfully!\n\nStudy ID: ${reportData.study_id}\nExam Type: ${reportData.exam_type}\nPriority: ${reportData.priority}`);
+                form.reset();
+                modal.style.display = 'none';
+                loadReports();
+            } else {
+                alert(`Error creating report: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Error creating report:', error);
+            alert('An error occurred. Please try again.');
+        } finally {
+            submitBtn.textContent = 'Create Report';
+            submitBtn.disabled = false;
+        }
+    });
+
+    // Load reports on page load
+    loadReports();
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>

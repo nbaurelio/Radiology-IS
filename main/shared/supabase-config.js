@@ -245,3 +245,56 @@ const patientDetailService = {
         }
     }
 };
+
+// Report Service
+const reportService = {
+    // Get all reports with patient and radiologist info
+    async getAllReports(limit = 50) {
+        try {
+            const { data, error } = await supabase
+                .from('reports')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            if (error) throw error;
+            return { success: true, reports: data };
+        } catch (error) {
+            console.error('Get reports error:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Search reports
+    async searchReports(searchTerm) {
+        try {
+            const { data, error } = await supabase
+                .from('reports')
+                .select('*')
+                .or(`study_id.ilike.%${searchTerm}%,exam_type.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%,assigned_radiologist.ilike.%${searchTerm}%`)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return { success: true, reports: data };
+        } catch (error) {
+            console.error('Search reports error:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Create new report
+    async createReport(reportData) {
+        try {
+            const { data, error } = await supabase
+                .from('reports')
+                .insert([reportData])
+                .select();
+
+            if (error) throw error;
+            return { success: true, report: data[0] };
+        } catch (error) {
+            console.error('Create report error:', error);
+            return { success: false, message: error.message };
+        }
+    }
+};

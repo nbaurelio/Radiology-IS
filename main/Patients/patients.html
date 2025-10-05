@@ -12,34 +12,8 @@
 </head>
 <body>
 
-<!-- Top navbar -->
-<header class="topnav">
-    <div class="row">
-        <div class="brand">
-            <span class="logo"></span>
-            <div>
-                Radiology IS
-                <small>Patients</small>
-            </div>
-        </div>
-        <div class="spacer"></div>
-        <div class="actions">
-            <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
-            <button class="btn">Settings</button>
-            <button class="btn" id="logoutBtn">Logout</button>
-            <div class="avatar" href="#" aria-label="Profile"></div>
-        </div>
-    </div>
-
-    <!-- Tabs -->
-    <nav class="tabs" aria-label="Primary">
-        <a class="tab" href="../Dashboard/dashboard.html">Dashboard</a>
-        <a class="tab" href="#">Upload DICOM</a>
-        <a class="tab" href="#">Reports</a>
-        <a class="tab" href="#">Telehealth</a>
-        <a class="tab active" href="patients.html">Patients</a>
-    </nav>
-</header>
+<!-- Header will be injected here -->
+<div id="header-container"></div>
 
 <!-- Page content -->
 <main class="container">
@@ -177,6 +151,7 @@
 <!-- Load Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../shared/supabase-config.js"></script>
+<script src="../shared/header.js"></script>
 
 <script>
     // Check if user is logged in
@@ -185,12 +160,8 @@
         window.location.href = '../Login/login.html';
     }
 
-    // Logout functionality
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to logout?')) {
-            authService.logout();
-        }
-    });
+    // Initialize header with smooth animations
+    headerComponent.initialize('patients');
 
     // Modal functionality
     const modal = document.getElementById('addPatientModal');
