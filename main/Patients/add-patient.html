@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Add New Patient - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
+    <link rel="stylesheet" href="patients.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        .form-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .form-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--card-border);
+        }
+
+        .form-section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--ink);
+        }
+
+        .form-section-subtitle {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 400;
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .required {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .input-with-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            font-size: 21px;
+            color: #d8d8d8;
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            font-size: 14px;
+            background: var(--panel);
+            color: var(--muted);
+            font-family: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px color-mix(in lab, var(--brand) 15%, transparent);
+        }
+
+        .form-input:hover {
+            border-color: var(--card-border-hover);
+        }
+
+        .form-input::placeholder {
+            color: #9ca3af;
+            font-weight: 400;
+        }
+
+        textarea.form-input {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+            padding-top: 12px;
+        }
+
+        select.form-input {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .btn-cancel {
+            padding: 12px 28px;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            background: var(--panel);
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background: var(--bg);
+            border-color: var(--card-border-hover);
+        }
+
+        .btn-create {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--brand), #7a5af8);
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 16px rgba(109,93,252,.25);
+        }
+
+        .btn-create:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(109,93,252,.35);
+        }
+
+        .btn-create:active {
+            transform: translateY(0);
+        }
+
+        .btn-create:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header will be injected here -->
+<div id="header-container"></div>
+
+<main class="container">
+    <div class="form-page">
+        <div style="margin-bottom: 20px;">
+            <a href="patients.html" class="btn" style="text-decoration: none;">← Back to Patients</a>
+        </div>
+
+        <h1 style="font-size: 28px; margin-bottom: 24px; color: var(--text);">Add New Patient</h1>
+
+        <form id="patientForm">
+            <!-- Personal Information -->
+            <div class="form-section">
+                <h2 class="form-section-title">Personal Information</h2>
+                <p class="form-section-subtitle">Basic information about the patient</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="patientId">Patient ID <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">badge</span>
+                            <input type="text" id="patientId" class="form-input" placeholder="Ex: PAT-001" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="mrn">Medical Record Number (MRN)</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">assignment</span>
+                            <input type="text" id="mrn" class="form-input" placeholder="Ex: MRN-12345" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="firstName" class="form-input" placeholder="Ex: John" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="lastName" class="form-input" placeholder="Ex: Doe" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">cake</span>
+                            <input type="date" id="dateOfBirth" class="form-input" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="patientSex">Sex <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">wc</span>
+                            <select id="patientSex" class="form-input" required>
+                                <option value="">Select sex</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="form-section">
+                <h2 class="form-section-title">Contact Information</h2>
+                <p class="form-section-subtitle">How to reach the patient</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">phone</span>
+                            <input type="tel" id="phoneNumber" class="form-input" placeholder="Ex: +1 555 123 4567" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactEmail">Email Address</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">email</span>
+                            <input type="email" id="contactEmail" class="form-input" placeholder="Ex: patient@email.com" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="address">Address</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">home</span>
+                            <input type="text" id="address" class="form-input" placeholder="Ex: 123 Main St, City, State, ZIP" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medical Information -->
+            <div class="form-section">
+                <h2 class="form-section-title">Medical Information</h2>
+                <p class="form-section-subtitle">Patient's medical history and notes</p>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="medicalHistory">Medical History</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon" style="top: 12px;">description</span>
+                            <textarea id="medicalHistory" class="form-input" placeholder="Enter relevant medical history, conditions, allergies, etc."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="notes">Additional Notes</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon" style="top: 12px;">note</span>
+                            <textarea id="notes" class="form-input" placeholder="Any additional notes or comments"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appointment Information -->
+            <div class="form-section">
+                <h2 class="form-section-title">Appointment Information</h2>
+                <p class="form-section-subtitle">Schedule the patient's next appointment (optional)</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nextAppointment">Next Appointment Date & Time</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">event</span>
+                            <input type="datetime-local" id="nextAppointment" class="form-input" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+                <button type="submit" class="btn-create" id="submitBtn">Create Patient Profile</button>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="../shared/header.js"></script>
+
+<script>
+    // Check if user is logged in
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    // Initialize header
+    headerComponent.initialize('patients');
+
+    const form = document.getElementById('patientForm');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Cancel button - go back to patients page
+    cancelBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+            window.location.href = 'patients.html';
+        }
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        submitBtn.textContent = 'Creating...';
+        submitBtn.disabled = true;
+        
+        // Gather form data
+        const patientData = {
+            patient_id: document.getElementById('patientId').value.trim(),
+            mrn: document.getElementById('mrn').value.trim() || null,
+            first_name: document.getElementById('firstName').value.trim(),
+            last_name: document.getElementById('lastName').value.trim(),
+            name: `${document.getElementById('firstName').value.trim()} ${document.getElementById('lastName').value.trim()}`,
+            date_of_birth: document.getElementById('dateOfBirth').value || null,
+            sex: document.getElementById('patientSex').value,
+            phone: document.getElementById('phoneNumber').value.trim(),
+            email: document.getElementById('contactEmail').value.trim() || null,
+            address: document.getElementById('address').value.trim() || null,
+            medical_history: document.getElementById('medicalHistory').value.trim() || null,
+            notes: document.getElementById('notes').value.trim() || null,
+            next_appointment: document.getElementById('nextAppointment').value || null,
+            registration_date: new Date().toISOString(),
+            last_visit_date: null
+        };
+        
+        try {
+            const result = await patientService.createPatient(patientData);
+            
+            if (result.success) {
+                alert('Patient profile created successfully!');
+                window.location.href = 'patients.html';
+            } else {
+                alert(`Error creating patient: ${result.message}`);
+                submitBtn.textContent = 'Create Patient Profile';
+                submitBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An unexpected error occurred. Please try again.');
+            submitBtn.textContent = 'Create Patient Profile';
+            submitBtn.disabled = false;
+        }
+    });
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>

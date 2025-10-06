@@ -57,96 +57,6 @@
     </section>
 </main>
 
-<!-- Add Patient Modal -->
-<div class="modal" id="addPatientModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div>
-                <h2>Personal info</h2>
-                <p class="modal-subtitle">Basic info about the patient</p>
-            </div>
-            <button class="close-btn" id="closeModalBtn">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="patientForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="firstName">First Name <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">person</span>
-                            <input type="text" id="firstName" class="form-input" placeholder="Ex: John" required />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="lastName">Last Name <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">person</span>
-                            <input type="text" id="lastName" class="form-input" placeholder="Ex: Doe" required />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="patientId">Patient ID <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">badge</span>
-                            <input type="text" id="patientId" class="form-input" placeholder="Ex: PAT-004" required />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="contactEmail">Contact Email</label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">email</span>
-                            <input type="email" id="contactEmail" class="form-input" placeholder="Ex: patient@email.com" />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="phoneNumber">Phone Number <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">phone</span>
-                            <input type="tel" id="phoneNumber" class="form-input" placeholder="Ex: +1 555 123 4567" required />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="patientSex">Sex <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">wc</span>
-                            <select id="patientSex" class="form-input" required>
-                                <option value="">Select sex</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="dateOfBirth">Date of Birth</label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">cake</span>
-                            <input type="date" id="dateOfBirth" class="form-input" />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="address">Address</label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">home</span>
-                            <input type="text" id="address" class="form-input" placeholder="Ex: 123 Main St" />
-                        </div>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-create" id="submitBtn">Create Profile</button>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- Load Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -163,29 +73,12 @@
     // Initialize header with smooth animations
     headerComponent.initialize('patients');
 
-    // Modal functionality
-    const modal = document.getElementById('addPatientModal');
+    // Add patient button - navigate to add patient page
     const addBtn = document.getElementById('addPatientBtn');
-    const closeBtn = document.getElementById('closeModalBtn');
-    const form = document.getElementById('patientForm');
     const searchInput = document.getElementById('searchInput');
 
-    // Open modal
     addBtn.addEventListener('click', () => {
-        modal.style.display = 'flex';
-        form.reset();
-    });
-
-    // Close modal
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    // Close modal when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
+        window.location.href = 'add-patient.html';
     });
 
     // Load patients
@@ -248,7 +141,14 @@
             // Format next appointment
             let appointmentDisplay = '';
             if (patient.next_appointment) {
-                appointmentDisplay = patient.next_appointment;
+                // Format timestamp as "YYYY-MM-DD HH:MM AM/PM"
+                const date = new Date(patient.next_appointment);
+                const dateStr = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+                let hours = date.getHours();
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12; // Convert to 12-hour format
+                appointmentDisplay = `${dateStr} ${hours}:${minutes} ${ampm}`;
             } else {
                 appointmentDisplay = '<span class="badge badge-no-appointment">No Appointment</span>';
             }
@@ -283,45 +183,6 @@
         }, 300);
     });
 
-    // Handle form submission
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.textContent = 'Creating...';
-        submitBtn.disabled = true;
-        
-        const patientData = {
-            patient_id: document.getElementById('patientId').value.trim(),
-            first_name: document.getElementById('firstName').value.trim(),
-            last_name: document.getElementById('lastName').value.trim(),
-            email: document.getElementById('contactEmail').value.trim() || null,
-            phone: document.getElementById('phoneNumber').value.trim(),
-            sex: document.getElementById('patientSex').value,
-            date_of_birth: document.getElementById('dateOfBirth').value || null,
-            address: document.getElementById('address').value.trim() || null,
-            name: `${document.getElementById('firstName').value.trim()} ${document.getElementById('lastName').value.trim()}`
-        };
-        
-        try {
-            const result = await patientService.createPatient(patientData);
-            
-            if (result.success) {
-                alert(`Patient profile created successfully!\n\nPatient ID: ${patientData.patient_id}\nName: ${patientData.first_name} ${patientData.last_name}`);
-                form.reset();
-                modal.style.display = 'none';
-                loadPatients();
-            } else {
-                alert(`Error creating patient: ${result.message}`);
-            }
-        } catch (error) {
-            console.error('Error creating patient:', error);
-            alert('An error occurred. Please try again.');
-        } finally {
-            submitBtn.textContent = 'Create Profile';
-            submitBtn.disabled = false;
-        }
-    });
 
     // Load patients on page load
     loadPatients();

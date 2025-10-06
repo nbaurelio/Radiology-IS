@@ -147,7 +147,17 @@
         }
 
         const appointmentsList = appointments.map(apt => {
-            const date = new Date(apt.appointment_date).toLocaleString();
+            // Format timestamp as "YYYY-MM-DD HH:MM AM/PM"
+            let dateStr = 'N/A';
+            if (apt.appointment_date) {
+                const date = new Date(apt.appointment_date);
+                const datePart = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+                let hours = date.getHours();
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12; // Convert to 12-hour format
+                dateStr = `${datePart} ${hours}:${minutes} ${ampm}`;
+            }
             const statusClass = apt.status === 'scheduled' ? 'badge-pending' : 
                                apt.status === 'completed' ? 'badge-done' : 'badge-reading';
             
@@ -156,7 +166,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>${apt.exam_type}</strong><br>
-                            <span style="color: var(--muted); font-size: 14px;">${date}</span>
+                            <span style="color: var(--muted); font-size: 14px;">${dateStr}</span>
                         </div>
                         <span class="badge ${statusClass}">${apt.status.toUpperCase()}</span>
                     </div>
