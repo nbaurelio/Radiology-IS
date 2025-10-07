@@ -19,14 +19,40 @@
 <main class="container">
     <section class="grid">
 
-        <!-- Search and Add Report Bar -->
+        <!-- Search Bar -->
         <article class="card search-bar">
             <div class="search-container">
                 <input type="text" class="search-input" id="searchInput" placeholder="Search reports by patient, study, or radiologist..." />
             </div>
-            <a href="add-report.html" class="add-patient-btn" aria-label="Add Report" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
-                <span class="plus-icon">+</span>
-            </a>
+        </article>
+
+        <!-- Pending Studies Section -->
+        <article class="card table-card">
+            <div class="hd">
+                Pending Studies (<span id="pendingCount">0</span>)
+                <p style="margin: 4px 0 0 0; font-size: 13px; font-weight: 400; color: var(--muted);">Studies awaiting report creation</p>
+            </div>
+            <div class="bd">
+                <div class="table-wrap">
+                    <table class="tbl">
+                        <thead>
+                        <tr>
+                            <th>Study ID</th>
+                            <th>Patient</th>
+                            <th>Files</th>
+                            <th>Upload Date</th>
+                            <th>Priority</th>
+                            <th>Clinical History</th>
+                        </tr>
+                        </thead>
+                        <tbody id="pendingStudiesTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 24px;">Loading pending studies...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </article>
 
         <!-- Reports List -->
@@ -75,6 +101,77 @@
     headerComponent.initialize('reports');
 
     const searchInput = document.getElementById('searchInput');
+
+    // Load pending studies
+    async function loadPendingStudies() {
+        const tbody = document.getElementById('pendingStudiesTableBody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px;">Loading pending studies...</td></tr>';
+
+        try {
+            const result = await studyService.getPendingStudies();
+            
+            if (result.success && result.studies && result.studies.length > 0) {
+                displayPendingStudies(result.studies);
+                document.getElementById('pendingCount').textContent = result.studies.length;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 24px;">
+                            No pending studies. All studies have been reviewed.
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('pendingCount').textContent = '0';
+            }
+        } catch (error) {
+            console.error('Error loading pending studies:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+                        Error loading pending studies. Check console for details.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Display pending studies
+    function displayPendingStudies(studies) {
+        const tbody = document.getElementById('pendingStudiesTableBody');
+        
+        tbody.innerHTML = studies.map(study => {
+            const patientName = study.patients ? 
+                `${study.patients.first_name} ${study.patients.last_name}` : 
+                'Unknown Patient';
+            
+            const priorityClass = study.priority === 'stat' ? 'badge-priority-stat' : 
+                                 study.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine';
+            
+            const priorityText = study.priority === 'stat' ? 'STAT' : 
+                                (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1);
+            
+            const uploadDate = study.created_at ? new Date(study.created_at).toLocaleDateString() : 'N/A';
+            
+            const fileCount = study.dicom_files ? study.dicom_files.length : 0;
+            
+            const clinicalHistory = study.clinical_history || 'None provided';
+            const truncatedHistory = clinicalHistory.length > 50 ? 
+                clinicalHistory.substring(0, 50) + '...' : clinicalHistory;
+
+            return `
+                <tr onclick="window.location.href='../Upload/study-detail.html?id=${study.id}'" style="cursor: pointer;">
+                    <td data-label="Study ID">${study.study_id || 'N/A'}</td>
+                    <td data-label="Patient">${patientName}</td>
+                    <td data-label="Files">${fileCount} file(s)</td>
+                    <td data-label="Upload Date">${uploadDate}</td>
+                    <td data-label="Priority">
+                        <span class="badge ${priorityClass}">${priorityText}</span>
+                    </td>
+                    <td data-label="Clinical History">${truncatedHistory}</td>
+                </tr>
+            `;
+        }).join('');
+    }
 
     // Load reports
     async function loadReports() {
@@ -192,7 +289,8 @@
         }, 300);
     });
 
-    // Load reports on page load
+    // Load pending studies and reports on page load
+    loadPendingStudies();
     loadReports();
 </script>
 

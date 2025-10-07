@@ -318,48 +318,69 @@
         updateFileList();
     };
 
-    // Load studies (placeholder - will be implemented with database)
+    // Load studies from studies table
     async function loadStudies() {
         const tbody = document.getElementById('studiesTableBody');
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px;">Loading studies...</td></tr>';
 
-        // TODO: Replace with actual database call
-        setTimeout(() => {
+        try {
+            const result = await studyService.getAllStudies();
+            
+            if (result.success && result.studies && result.studies.length > 0) {
+                displayStudies(result.studies);
+                document.getElementById('studyCount').textContent = result.studies.length;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 24px;">
+                            No studies found. Click + to upload a new DICOM study.
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('studyCount').textContent = '0';
+            }
+        } catch (error) {
+            console.error('Error loading studies:', error);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 24px;">
-                        No studies found. Click + to upload a new DICOM study.
+                    <td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">
+                        Error loading studies. Check console for details.
                     </td>
                 </tr>
             `;
-            document.getElementById('studyCount').textContent = '0';
-        }, 500);
+        }
     }
 
-    // Display studies in table (placeholder)
+    // Display studies in table
     function displayStudies(studies) {
         const tbody = document.getElementById('studiesTableBody');
         tbody.innerHTML = studies.map(study => {
-            const patientName = study.patient_name || 'Unknown Patient';
+            // Get patient name from joined patients table
+            const patientName = study.patients ? 
+                `${study.patients.first_name} ${study.patients.last_name}` : 
+                'Unknown Patient';
 
             const priorityClass = study.priority === 'stat' ? 'badge-priority-stat' : 
                                  study.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine';
             
             const statusClass = study.status === 'pending' ? 'badge-pending' :
-                               study.status === 'in_progress' ? 'badge-reading' : 'badge-done';
+                               study.status === 'reading' ? 'badge-reading' : 'badge-done';
 
             const priorityText = study.priority === 'stat' ? 'STAT' : 
-                                (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1).toLowerCase();
+                                (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1);
             
-            const statusText = (study.status || 'pending').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const statusText = (study.status || 'pending').charAt(0).toUpperCase() + (study.status || 'pending').slice(1);
 
-            const studyDate = study.study_date ? new Date(study.study_date).toLocaleDateString() : 'N/A';
+            const studyDate = study.created_at ? new Date(study.created_at).toLocaleDateString() : 'N/A';
+            
+            // Count DICOM files
+            const fileCount = study.dicom_files ? study.dicom_files.length : 0;
 
             return `
                 <tr onclick="window.location.href='study-detail.html?id=${study.id}'" style="cursor: pointer;">
                     <td data-label="Study ID">${study.study_id || 'N/A'}</td>
                     <td data-label="Patient">${patientName}</td>
-                    <td data-label="Modality">${study.modality || 'N/A'}</td>
+                    <td data-label="Modality">DICOM (${fileCount} files)</td>
                     <td data-label="Study Date">${studyDate}</td>
                     <td data-label="Priority">
                         <span class="badge ${priorityClass}">${priorityText}</span>
@@ -372,15 +393,18 @@
         }).join('');
     }
 
-    // Search functionality (placeholder)
+    // Search functionality
     let searchTimeout;
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(async () => {
             const searchTerm = e.target.value.trim();
             if (searchTerm) {
-                // TODO: Implement search
-                console.log('Searching for:', searchTerm);
+                const result = await reportService.searchReports(searchTerm);
+                if (result.success) {
+                    displayStudies(result.reports);
+                    document.getElementById('studyCount').textContent = result.reports.length;
+                }
             } else {
                 loadStudies();
             }
@@ -415,36 +439,58 @@
         progressDiv.style.display = 'block';
         
         try {
-            // Simulate upload progress (in real implementation, this would be actual file upload)
+            // Simulate upload progress
             uploadStatus.textContent = 'Validating files...';
-            await simulateProgress(progressBar, progressPercent, 0, 30, 500);
+            await simulateProgress(progressBar, progressPercent, 0, 20, 500);
+            
+            uploadStatus.textContent = 'Generating Study ID...';
+            await simulateProgress(progressBar, progressPercent, 20, 40, 300);
+            
+            // Generate unique Study ID
+            const studyId = await reportService.generateStudyId();
             
             uploadStatus.textContent = 'Extracting DICOM metadata...';
-            await simulateProgress(progressBar, progressPercent, 30, 60, 800);
+            await simulateProgress(progressBar, progressPercent, 40, 60, 500);
             
-            uploadStatus.textContent = 'Uploading files to server...';
-            await simulateProgress(progressBar, progressPercent, 60, 90, 1000);
+            // Prepare file metadata
+            const fileMetadata = selectedFiles.map(file => ({
+                name: file.name,
+                size: file.size,
+                type: file.type || 'application/dicom'
+            }));
             
-            // Create study record
+            uploadStatus.textContent = 'Creating study record...';
+            await simulateProgress(progressBar, progressPercent, 60, 80, 500);
+            
+            // Create study record (NOT report)
             const studyData = {
-                patient_id: patientId,
+                study_id: studyId,
+                patient_uuid: patientId, // UUID of the patient
+                dicom_file_url: null, // Will be set after actual file upload
+                dicom_files: fileMetadata, // Store file metadata as JSON
                 clinical_history: document.getElementById('clinicalHistory').value.trim() || null,
                 priority: document.getElementById('examPriority').value,
                 status: 'pending',
-                file_count: selectedFiles.length,
-                total_size: selectedFiles.reduce((sum, file) => sum + file.size, 0),
+                created_by: currentUser?.id || null,
                 created_at: new Date().toISOString(),
-                created_by: currentUser.id
+                updated_at: new Date().toISOString()
             };
             
-            uploadStatus.textContent = 'Creating study record...';
-            await simulateProgress(progressBar, progressPercent, 90, 100, 300);
+            uploadStatus.textContent = 'Saving to database...';
+            await simulateProgress(progressBar, progressPercent, 80, 100, 500);
             
-            // TODO: Replace with actual database call and file upload
-            console.log('Study data:', studyData);
-            console.log('Files to upload:', selectedFiles);
+            // Save to database
+            const result = await studyService.createStudy(studyData);
             
-            alert(`Upload successful!\n\n${selectedFiles.length} file(s) uploaded\nTotal size: ${(studyData.total_size / (1024 * 1024)).toFixed(2)} MB`);
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to create study record');
+            }
+            
+            // TODO: In future, implement actual file upload to Supabase Storage here
+            console.log('Study created successfully:', result.study);
+            console.log('Files ready for upload:', selectedFiles);
+            
+            alert(`✅ Upload successful!\n\nStudy ID: ${studyId}\nFiles: ${selectedFiles.length}\nTotal size: ${(selectedFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(2)} MB\n\nThe study is now in the pending worklist.`);
             
             form.reset();
             selectedFiles = [];
@@ -456,7 +502,7 @@
             loadStudies();
         } catch (error) {
             console.error('Error uploading study:', error);
-            alert('An error occurred during upload. Please try again.');
+            alert('❌ Error: ' + (error.message || 'An error occurred during upload. Please try again.'));
         } finally {
             submitBtn.textContent = 'Upload Study';
             submitBtn.disabled = false;

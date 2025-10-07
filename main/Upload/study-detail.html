@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Study Details - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
+    <link rel="stylesheet" href="upload.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+<!-- Header will be injected here -->
+<div id="header-container"></div>
+
+<main class="container">
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <a href="../Reports/reports.html" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--panel); color: var(--ink); cursor: pointer; transition: border-color 0.2s ease; font-family: inherit; font-size: 14px; text-decoration: none;">← Back to Reports</a>
+        <button id="createReportBtn" style="display: flex; align-items: center; gap: 8px; padding: 12px 24px; border: none; border-radius: 12px; background: linear-gradient(135deg, var(--brand), #7a5af8); color: white; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700; box-shadow: 0 6px 16px rgba(109,93,252,.25); transition: transform 0.2s ease, box-shadow 0.2s ease;">
+            <span class="material-icons" style="font-size: 21px;">add_circle</span>
+            Create Report
+        </button>
+    </div>
+
+    <section class="grid">
+        <!-- Study Information -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Study Information</div>
+            <div class="bd">
+                <div id="studyInfoContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading study details...</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Patient Information -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Patient Information</div>
+            <div class="bd">
+                <div id="patientInfoContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading patient details...</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- DICOM Files -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">DICOM Files</div>
+            <div class="bd">
+                <div id="dicomFilesContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading files...</p>
+                </div>
+            </div>
+        </article>
+    </section>
+</main>
+
+<!-- Load Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="../shared/header.js"></script>
+
+<script>
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    // Initialize header
+    headerComponent.initialize('upload');
+
+    // Get study ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const studyId = urlParams.get('id');
+
+    if (!studyId) {
+        window.location.href = '../Reports/reports.html';
+    }
+
+    let currentStudy = null;
+
+    // Load study details
+    async function loadStudyDetails() {
+        const result = await studyService.getStudyById(studyId);
+        
+        if (result.success) {
+            currentStudy = result.study;
+            displayStudyInfo(result.study);
+            displayPatientInfo(result.study.patients);
+            displayDicomFiles(result.study.dicom_files);
+        } else {
+            document.getElementById('studyInfoContent').innerHTML = 
+                `<p style="color: #ef4444; text-align: center;">Error loading study details</p>`;
+        }
+    }
+
+    // Display study information
+    function displayStudyInfo(study) {
+        const content = document.getElementById('studyInfoContent');
+        
+        const priorityClass = study.priority === 'stat' ? 'badge-priority-stat' : 
+                             study.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine';
+        const priorityText = study.priority === 'stat' ? 'STAT' : 
+                            (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1);
+        
+        const statusClass = study.status === 'pending' ? 'badge-pending' :
+                           study.status === 'reading' ? 'badge-reading' : 'badge-done';
+        const statusText = (study.status || 'pending').charAt(0).toUpperCase() + (study.status || 'pending').slice(1);
+        
+        const uploadDate = study.created_at ? new Date(study.created_at).toLocaleString() : 'N/A';
+        
+        content.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600; width: 30%;">Study ID</td>
+                    <td style="padding: 12px;">${study.study_id || 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Upload Date</td>
+                    <td style="padding: 12px;">${uploadDate}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Priority</td>
+                    <td style="padding: 12px;"><span class="badge ${priorityClass}">${priorityText}</span></td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Status</td>
+                    <td style="padding: 12px;"><span class="badge ${statusClass}">${statusText}</span></td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; font-weight: 600;">Clinical History</td>
+                    <td style="padding: 12px;">${study.clinical_history || 'None provided'}</td>
+                </tr>
+            </table>
+        `;
+    }
+
+    // Display patient information
+    function displayPatientInfo(patient) {
+        const content = document.getElementById('patientInfoContent');
+        
+        if (!patient) {
+            content.innerHTML = '<p style="color: var(--muted);">Patient information not available</p>';
+            return;
+        }
+        
+        const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
+        const dob = patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A';
+        const sex = patient.sex ? patient.sex.charAt(0).toUpperCase() + patient.sex.slice(1) : 'N/A';
+        
+        content.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600; width: 30%;">Patient ID</td>
+                    <td style="padding: 12px;">${patient.patient_id || 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Full Name</td>
+                    <td style="padding: 12px;">${fullName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Date of Birth</td>
+                    <td style="padding: 12px;">${dob}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Sex</td>
+                    <td style="padding: 12px;">${sex}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 12px; font-weight: 600;">Phone</td>
+                    <td style="padding: 12px;">${patient.phone || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; font-weight: 600;">Email</td>
+                    <td style="padding: 12px;">${patient.email || 'N/A'}</td>
+                </tr>
+            </table>
+        `;
+    }
+
+    // Display DICOM files
+    function displayDicomFiles(files) {
+        const content = document.getElementById('dicomFilesContent');
+        
+        if (!files || files.length === 0) {
+            content.innerHTML = '<p style="color: var(--muted);">No DICOM files found</p>';
+            return;
+        }
+        
+        const filesList = files.map((file, index) => {
+            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+            const fileIcon = file.name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file';
+            
+            return `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <span class="material-icons" style="color: var(--brand);">${fileIcon}</span>
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="file-item-name">${file.name}</div>
+                            <div class="file-item-size">${sizeInMB} MB</div>
+                        </div>
+                    </div>
+                    <div class="file-item-status">
+                        <span class="badge badge-done">Uploaded</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        content.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${filesList}
+            </div>
+        `;
+    }
+
+    // Create Report button
+    document.getElementById('createReportBtn').addEventListener('click', () => {
+        if (!currentStudy) {
+            alert('Study information not loaded');
+            return;
+        }
+        
+        // Navigate to add-report page with study ID
+        window.location.href = `../Reports/add-report.html?study_id=${currentStudy.id}`;
+    });
+
+    // Load study details on page load
+    loadStudyDetails();
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>

@@ -88,6 +88,110 @@ const authService = {
 
 // Patient management functions
 const patientService = {
+    // Generate next Patient ID (PAT-0001, PAT-0002, ..., PAT-9999, PAT-A0000, etc.)
+    async generatePatientId() {
+        try {
+            // Get the highest patient_id from patients table
+            const { data, error } = await supabase
+                .from('patients')
+                .select('patient_id')
+                .not('patient_id', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(100); // Get last 100 to find the highest
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                return 'PAT-0001'; // First ID
+            }
+
+            // Find the highest patient ID
+            let highestId = 'PAT-0000';
+            for (const record of data) {
+                if (record.patient_id && record.patient_id.startsWith('PAT-')) {
+                    if (this.comparePatientIds(record.patient_id, highestId) > 0) {
+                        highestId = record.patient_id;
+                    }
+                }
+            }
+
+            return this.incrementPatientId(highestId);
+        } catch (error) {
+            console.error('Generate patient ID error:', error);
+            return 'PAT-0001'; // Fallback to first ID
+        }
+    },
+
+    // Compare two patient IDs (returns 1 if a > b, -1 if a < b, 0 if equal)
+    comparePatientIds(a, b) {
+        const parseId = (id) => {
+            const match = id.match(/^PAT-([A-Z]*)(\d+)$/);
+            if (!match) return { prefix: '', number: 0 };
+            return { prefix: match[1], number: parseInt(match[2]) };
+        };
+
+        const idA = parseId(a);
+        const idB = parseId(b);
+
+        // Compare prefix length first (longer prefix = higher)
+        if (idA.prefix.length !== idB.prefix.length) {
+            return idA.prefix.length - idB.prefix.length;
+        }
+
+        // Compare prefix alphabetically
+        if (idA.prefix !== idB.prefix) {
+            return idA.prefix.localeCompare(idB.prefix);
+        }
+
+        // Compare numbers
+        return idA.number - idB.number;
+    },
+
+    // Increment Patient ID
+    incrementPatientId(lastId) {
+        const match = lastId.match(/^PAT-([A-Z]*)(\d+)$/);
+        if (!match) return 'PAT-0001';
+
+        let prefix = match[1];
+        let number = parseInt(match[2]);
+
+        number++;
+
+        // If number exceeds 9999, increment prefix
+        if (number > 9999) {
+            number = 0;
+            prefix = this.incrementPrefix(prefix);
+        }
+
+        return `PAT-${prefix}${number.toString().padStart(4, '0')}`;
+    },
+
+    // Increment prefix ('' → 'A', 'A' → 'B', 'Z' → 'AA', 'AZ' → 'BA', etc.)
+    incrementPrefix(prefix) {
+        if (!prefix) return 'A';
+        
+        // Convert prefix to array of characters
+        const chars = prefix.split('');
+        
+        // Start from the rightmost character
+        for (let i = chars.length - 1; i >= 0; i--) {
+            if (chars[i] === 'Z') {
+                chars[i] = 'A';
+                // If this was the leftmost character, add a new 'A' at the start
+                if (i === 0) {
+                    return 'A' + chars.join('');
+                }
+                // Otherwise continue to increment the next character
+            } else {
+                // Increment this character and we're done
+                chars[i] = String.fromCharCode(chars[i].charCodeAt(0) + 1);
+                return chars.join('');
+            }
+        }
+        
+        return chars.join('');
+    },
+
     // Create new patient
     async createPatient(patientData) {
         try {
@@ -141,23 +245,99 @@ const patientService = {
 
 // Study management functions
 const studyService = {
-    // Get recent studies for dashboard
-    async getRecentStudies(limit = 10) {
+    // Create new study (from DICOM upload)
+    async createStudy(studyData) {
+        try {
+            const { data, error } = await supabase
+                .from('studies')
+                .insert([studyData])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, study: data };
+        } catch (error) {
+            console.error('Create study error:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Get all studies
+    async getAllStudies() {
         try {
             const { data, error } = await supabase
                 .from('studies')
                 .select(`
                     *,
-                    patients(first_name, last_name, patient_id),
-                    assigned_radiologist:users!assigned_radiologist_id(first_name, last_name)
+                    patients(id, patient_id, first_name, last_name)
                 `)
-                .order('created_at', { ascending: false })
-                .limit(limit);
+                .order('created_at', { ascending: false });
 
             if (error) throw error;
             return { success: true, studies: data };
         } catch (error) {
             console.error('Get studies error:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Get pending studies (for worklist)
+    async getPendingStudies() {
+        try {
+            const { data, error } = await supabase
+                .from('studies')
+                .select(`
+                    *,
+                    patients(id, patient_id, first_name, last_name)
+                `)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return { success: true, studies: data };
+        } catch (error) {
+            console.error('Get pending studies error:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Get study by ID
+    async getStudyById(studyId) {
+        try {
+            const { data, error } = await supabase
+                .from('studies')
+                .select(`
+                    *,
+                    patients(id, patient_id, first_name, last_name, date_of_birth, sex, phone, email)
+                `)
+                .eq('id', studyId)
+                .single();
+
+            if (error) throw error;
+            return { success: true, study: data };
+        } catch (error) {
+            console.error('Get study error:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    // Update study status
+    async updateStudyStatus(studyId, status) {
+        try {
+            const { data, error } = await supabase
+                .from('studies')
+                .update({ 
+                    status: status,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', studyId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, study: data };
+        } catch (error) {
+            console.error('Update study status error:', error);
             return { success: false, message: error.message };
         }
     },
@@ -201,8 +381,6 @@ const studyService = {
             return { success: false, message: error.message };
         }
     }
-
-    
 };
 
 // Patient detail functions
@@ -369,5 +547,109 @@ const reportService = {
             console.error('Get patients error:', error);
             return { success: false, message: error.message };
         }
+    },
+
+    // Generate next Study ID (STU-0001, STU-0002, ..., STU-9999, STU-A0000, etc.)
+    async generateStudyId() {
+        try {
+            // Get the highest study_id from reports table
+            const { data, error } = await supabase
+                .from('reports')
+                .select('study_id')
+                .not('study_id', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(100); // Get last 100 to find the highest
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                return 'STU-0001'; // First ID
+            }
+
+            // Find the highest study ID
+            let highestId = 'STU-0000';
+            for (const record of data) {
+                if (record.study_id && record.study_id.startsWith('STU-')) {
+                    if (this.compareStudyIds(record.study_id, highestId) > 0) {
+                        highestId = record.study_id;
+                    }
+                }
+            }
+
+            return this.incrementStudyId(highestId);
+        } catch (error) {
+            console.error('Generate study ID error:', error);
+            return 'STU-0001'; // Fallback to first ID
+        }
+    },
+
+    // Compare two study IDs (returns 1 if a > b, -1 if a < b, 0 if equal)
+    compareStudyIds(a, b) {
+        const parseId = (id) => {
+            const match = id.match(/^STU-([A-Z]*)(\d+)$/);
+            if (!match) return { prefix: '', number: 0 };
+            return { prefix: match[1], number: parseInt(match[2]) };
+        };
+
+        const idA = parseId(a);
+        const idB = parseId(b);
+
+        // Compare prefix length first (longer prefix = higher)
+        if (idA.prefix.length !== idB.prefix.length) {
+            return idA.prefix.length - idB.prefix.length;
+        }
+
+        // Compare prefix alphabetically
+        if (idA.prefix !== idB.prefix) {
+            return idA.prefix.localeCompare(idB.prefix);
+        }
+
+        // Compare numbers
+        return idA.number - idB.number;
+    },
+
+    // Increment Study ID
+    incrementStudyId(lastId) {
+        const match = lastId.match(/^STU-([A-Z]*)(\d+)$/);
+        if (!match) return 'STU-0001';
+
+        let prefix = match[1];
+        let number = parseInt(match[2]);
+
+        number++;
+
+        // If number exceeds 9999, increment prefix
+        if (number > 9999) {
+            number = 0;
+            prefix = this.incrementPrefix(prefix);
+        }
+
+        return `STU-${prefix}${number.toString().padStart(4, '0')}`;
+    },
+
+    // Increment prefix ('' → 'A', 'A' → 'B', 'Z' → 'AA', 'AZ' → 'BA', etc.)
+    incrementPrefix(prefix) {
+        if (!prefix) return 'A';
+        
+        // Convert prefix to array of characters
+        const chars = prefix.split('');
+        
+        // Start from the rightmost character
+        for (let i = chars.length - 1; i >= 0; i--) {
+            if (chars[i] === 'Z') {
+                chars[i] = 'A';
+                // If this was the leftmost character, add a new 'A' at the start
+                if (i === 0) {
+                    return 'A' + chars.join('');
+                }
+                // Otherwise continue to increment the next character
+            } else {
+                // Increment this character and we're done
+                chars[i] = String.fromCharCode(chars[i].charCodeAt(0) + 1);
+                return chars.join('');
+            }
+        }
+        
+        return chars.join('');
     }
 };

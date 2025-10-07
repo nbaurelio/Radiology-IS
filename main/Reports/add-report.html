@@ -386,8 +386,45 @@
     const cancelBtn = document.getElementById('cancelBtn');
     const submitBtn = document.getElementById('submitBtn');
 
+    // Get study ID from URL if coming from study detail page
+    const urlParams = new URLSearchParams(window.location.search);
+    const studyIdFromUrl = urlParams.get('study_id');
+    let currentStudy = null;
+
     // Load patients on page load
     loadPatientsDropdown();
+
+    // Load study details if study_id is provided
+    async function loadStudyDetails() {
+        if (!studyIdFromUrl) return;
+
+        const result = await studyService.getStudyById(studyIdFromUrl);
+        
+        if (result.success) {
+            currentStudy = result.study;
+            
+            // Pre-fill form with study data
+            const studyIdInput = document.getElementById('studyId');
+            studyIdInput.value = currentStudy.study_id;
+            studyIdInput.readOnly = true;
+            studyIdInput.style.background = 'var(--bg)';
+            studyIdInput.style.cursor = 'not-allowed';
+            
+            // Select patient
+            const patientSelect = document.getElementById('patientSelect');
+            patientSelect.value = currentStudy.patient_uuid;
+            patientSelect.disabled = true;
+            patientSelect.style.background = 'var(--bg)';
+            patientSelect.style.cursor = 'not-allowed';
+            
+            // Set priority
+            document.getElementById('priority').value = currentStudy.priority;
+            
+            // Set appointment date to study creation date
+            const studyDate = new Date(currentStudy.created_at);
+            document.getElementById('appointmentDate').value = studyDate.toISOString().slice(0, 16);
+        }
+    }
 
     // Load patients for dropdown
     async function loadPatientsDropdown() {
@@ -401,6 +438,9 @@
                 result.patients.map(p => 
                     `<option value="${p.id}">${p.first_name} ${p.last_name} (${p.patient_id})</option>`
                 ).join('');
+            
+            // Load study details after patients are loaded
+            await loadStudyDetails();
         } else {
             patientSelect.innerHTML = '<option value="">No patients found</option>';
         }
@@ -445,6 +485,12 @@
             const result = await reportService.createReport(reportData);
             
             if (result.success) {
+                // If this report was created from a study, update the study status
+                if (currentStudy) {
+                    const statusToSet = reportData.status === 'completed' ? 'completed' : 'reading';
+                    await studyService.updateStudyStatus(currentStudy.id, statusToSet);
+                }
+                
                 alert(`Radiology report created successfully!\n\nStudy ID: ${reportData.study_id}\nExam Type: ${reportData.exam_type}\nDate: ${new Date(reportData.appointment_date).toLocaleString()}`);
                 window.location.href = 'reports.html';
             } else {

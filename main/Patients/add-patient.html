@@ -206,8 +206,9 @@
                         <label for="patientId">Patient ID <span class="required">*</span></label>
                         <div class="input-with-icon">
                             <span class="material-icons input-icon">badge</span>
-                            <input type="text" id="patientId" class="form-input" placeholder="Ex: PAT-001" required />
+                            <input type="text" id="patientId" class="form-input" placeholder="Auto-generating..." readonly required />
                         </div>
+                        <small style="color: var(--muted); margin-top: 4px; display: block;">Auto-generated (e.g., PAT-0001)</small>
                     </div>
                     <div class="form-group">
                         <label for="mrn">Medical Record Number (MRN)</label>
@@ -333,6 +334,22 @@
     const form = document.getElementById('patientForm');
     const cancelBtn = document.getElementById('cancelBtn');
     const submitBtn = document.getElementById('submitBtn');
+    const patientIdInput = document.getElementById('patientId');
+
+    // Auto-generate Patient ID on page load
+    async function loadPatientId() {
+        try {
+            const patientId = await patientService.generatePatientId();
+            patientIdInput.value = patientId;
+            patientIdInput.placeholder = patientId;
+        } catch (error) {
+            console.error('Error generating patient ID:', error);
+            patientIdInput.placeholder = 'Error generating ID';
+        }
+    }
+
+    // Load patient ID when page loads
+    loadPatientId();
 
     // Cancel button - go back to patients page
     cancelBtn.addEventListener('click', () => {
