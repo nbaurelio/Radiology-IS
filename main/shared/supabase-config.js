@@ -219,10 +219,13 @@ const patientDetailService = {
 
             if (patientError) throw patientError;
 
-            // Get patient's appointments
+            // Get patient's appointments with study information
             const { data: appointments, error: appointmentsError } = await supabase
                 .from('appointments')
-                .select('*')
+                .select(`
+                    *,
+                    studies(study_id)
+                `)
                 .eq('patient_id', patientId)
                 .order('appointment_date', { ascending: false });
 

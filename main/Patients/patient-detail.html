@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="patients.css">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        #editInfoBtn:hover, #backToPatients:hover {
+            border-color: var(--card-border-hover);
+        }
+    </style>
 </head>
 <body>
 
@@ -15,8 +21,12 @@
 <div id="header-container"></div>
 
 <main class="container">
-    <div style="margin-bottom: 20px;">
-        <a href="patients.html" class="btn" style="text-decoration: none;">← Back to Patients</a>
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <a id="backToPatients" href="patients.html" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--panel); color: var(--ink); cursor: pointer; transition: border-color 0.2s ease; font-family: inherit; font-size: 14px; text-decoration: none;">← Back to Patients</a>
+        <button id="editInfoBtn" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--panel); color: var(--ink); cursor: pointer; transition: border-color 0.2s ease; font-family: inherit; font-size: 14px;">
+            <span class="material-icons" style="font-size: 21px; color: #d8d8d8;">edit</span>
+            Edit Info
+        </button>
     </div>
 
     <section class="grid">
@@ -72,10 +82,14 @@
         window.location.href = 'patients.html';
     }
 
+    let currentPatient = null;
+    let isEditMode = false;
+
     async function loadPatientDetails() {
         const result = await patientDetailService.getPatientDetail(patientId);
         
         if (result.success) {
+            currentPatient = result.patient;
             displayPatientInfo(result.patient);
             displayAppointments(result.appointments);
             displayStudies(result.studies);
@@ -89,53 +103,122 @@
         const content = document.getElementById('patientDetailContent');
         const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.name;
         
-        content.innerHTML = `
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600; width: 30%;">Patient ID</td>
-                    <td style="padding: 12px;">${patient.patient_id || 'N/A'}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Medical Record Number (MRN)</td>
-                    <td style="padding: 12px;">${patient.mrn || 'N/A'}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Full Name</td>
-                    <td style="padding: 12px;">${fullName}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Date of Birth</td>
-                    <td style="padding: 12px;">${patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A'}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Sex</td>
-                    <td style="padding: 12px;">${patient.sex ? patient.sex.charAt(0).toUpperCase() + patient.sex.slice(1) : 'N/A'}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Contact Information</td>
-                    <td style="padding: 12px;">
-                        ${patient.phone ? `Phone: ${patient.phone}<br>` : ''}
-                        ${patient.email ? `Email: ${patient.email}` : 'N/A'}
-                    </td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Address</td>
-                    <td style="padding: 12px;">${patient.address || 'N/A'}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Medical History Summary</td>
-                    <td style="padding: 12px;">${patient.medical_history || 'No medical history recorded'}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid var(--line);">
-                    <td style="padding: 12px; font-weight: 600;">Registration Date</td>
-                    <td style="padding: 12px;">${patient.registration_date ? new Date(patient.registration_date).toLocaleDateString() : 'N/A'}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px; font-weight: 600;">Last Visit / Last Study</td>
-                    <td style="padding: 12px;">${patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString() : 'No visits recorded'}</td>
-                </tr>
-            </table>
-        `;
+        if (isEditMode) {
+            content.innerHTML = `
+                <form id="editPatientForm" style="width: 100%;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600; width: 30%;">Patient ID</td>
+                            <td style="padding: 12px;"><input type="text" id="edit_patient_id" value="${patient.patient_id || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" required /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Medical Record Number (MRN)</td>
+                            <td style="padding: 12px;"><input type="text" id="edit_mrn" value="${patient.mrn || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">First Name</td>
+                            <td style="padding: 12px;"><input type="text" id="edit_first_name" value="${patient.first_name || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" required /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Last Name</td>
+                            <td style="padding: 12px;"><input type="text" id="edit_last_name" value="${patient.last_name || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" required /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Date of Birth</td>
+                            <td style="padding: 12px;"><input type="date" id="edit_date_of_birth" value="${patient.date_of_birth || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Sex</td>
+                            <td style="padding: 12px;">
+                                <select id="edit_sex" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);">
+                                    <option value="male" ${patient.sex === 'male' ? 'selected' : ''}>Male</option>
+                                    <option value="female" ${patient.sex === 'female' ? 'selected' : ''}>Female</option>
+                                    <option value="other" ${patient.sex === 'other' ? 'selected' : ''}>Other</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Phone</td>
+                            <td style="padding: 12px;"><input type="tel" id="edit_phone" value="${patient.phone || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Email</td>
+                            <td style="padding: 12px;"><input type="email" id="edit_email" value="${patient.email || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Address</td>
+                            <td style="padding: 12px;"><input type="text" id="edit_address" value="${patient.address || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" /></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Medical History Summary</td>
+                            <td style="padding: 12px;"><textarea id="edit_medical_history" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted); min-height: 80px;">${patient.medical_history || ''}</textarea></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <td style="padding: 12px; font-weight: 600;">Registration Date</td>
+                            <td style="padding: 12px;">${patient.registration_date ? new Date(patient.registration_date).toLocaleDateString() : 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; font-weight: 600;">Last Visit / Last Study</td>
+                            <td style="padding: 12px;">${patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString() : 'No visits recorded'}</td>
+                        </tr>
+                    </table>
+                    <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" onclick="cancelEdit()" class="btn" style="border: 1px solid var(--card-border);">Cancel</button>
+                        <button type="submit" class="btn" style="background: linear-gradient(135deg, var(--brand), #7a5af8); color: white; border: none;">Save Changes</button>
+                    </div>
+                </form>
+            `;
+            
+            document.getElementById('editPatientForm').addEventListener('submit', savePatientInfo);
+        } else {
+            content.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600; width: 30%;">Patient ID</td>
+                        <td style="padding: 12px;">${patient.patient_id || 'N/A'}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Medical Record Number (MRN)</td>
+                        <td style="padding: 12px;">${patient.mrn || 'N/A'}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Full Name</td>
+                        <td style="padding: 12px;">${fullName}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Date of Birth</td>
+                        <td style="padding: 12px;">${patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Sex</td>
+                        <td style="padding: 12px;">${patient.sex ? patient.sex.charAt(0).toUpperCase() + patient.sex.slice(1) : 'N/A'}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Contact Information</td>
+                        <td style="padding: 12px;">
+                            ${patient.phone ? `Phone: ${patient.phone}<br>` : ''}
+                            ${patient.email ? `Email: ${patient.email}` : 'N/A'}
+                        </td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Address</td>
+                        <td style="padding: 12px;">${patient.address || 'N/A'}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Medical History Summary</td>
+                        <td style="padding: 12px;">${patient.medical_history || 'No medical history recorded'}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 12px; font-weight: 600;">Registration Date</td>
+                        <td style="padding: 12px;">${patient.registration_date ? new Date(patient.registration_date).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; font-weight: 600;">Last Visit / Last Study</td>
+                        <td style="padding: 12px;">${patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString() : 'No visits recorded'}</td>
+                    </tr>
+                </table>
+            `;
+        }
     }
 
     function displayAppointments(appointments) {
@@ -161,12 +244,16 @@
             const statusClass = apt.status === 'scheduled' ? 'badge-pending' : 
                                apt.status === 'completed' ? 'badge-done' : 'badge-reading';
             
+            // Get study_id from the joined studies table
+            const studyId = apt.studies?.study_id || 'N/A';
+            
             return `
                 <div style="padding: 16px; border-bottom: 1px solid var(--line);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>${apt.exam_type}</strong><br>
-                            <span style="color: var(--muted); font-size: 14px;">${dateStr}</span>
+                            <span style="color: var(--muted); font-size: 14px;">${dateStr}</span><br>
+                            <span style="color: var(--muted); font-size: 13px;">Study ID: ${studyId}</span>
                         </div>
                         <span class="badge ${statusClass}">${apt.status.toUpperCase()}</span>
                     </div>
@@ -205,6 +292,63 @@
         }).join('');
 
         content.innerHTML = studiesList;
+    }
+
+    // Edit button functionality
+    document.getElementById('editInfoBtn').addEventListener('click', () => {
+        isEditMode = true;
+        displayPatientInfo(currentPatient);
+        document.getElementById('editInfoBtn').textContent = 'Editing...';
+        document.getElementById('editInfoBtn').disabled = true;
+    });
+
+    // Cancel edit
+    function cancelEdit() {
+        isEditMode = false;
+        displayPatientInfo(currentPatient);
+        document.getElementById('editInfoBtn').textContent = 'Edit Info';
+        document.getElementById('editInfoBtn').disabled = false;
+    }
+
+    // Save patient info
+    async function savePatientInfo(e) {
+        e.preventDefault();
+        
+        const updatedData = {
+            patient_id: document.getElementById('edit_patient_id').value.trim(),
+            mrn: document.getElementById('edit_mrn').value.trim() || null,
+            first_name: document.getElementById('edit_first_name').value.trim(),
+            last_name: document.getElementById('edit_last_name').value.trim(),
+            name: `${document.getElementById('edit_first_name').value.trim()} ${document.getElementById('edit_last_name').value.trim()}`,
+            date_of_birth: document.getElementById('edit_date_of_birth').value || null,
+            sex: document.getElementById('edit_sex').value,
+            phone: document.getElementById('edit_phone').value.trim() || null,
+            email: document.getElementById('edit_email').value.trim() || null,
+            address: document.getElementById('edit_address').value.trim() || null,
+            medical_history: document.getElementById('edit_medical_history').value.trim() || null,
+            updated_at: new Date().toISOString()
+        };
+
+        try {
+            const { data, error } = await supabase
+                .from('patients')
+                .update(updatedData)
+                .eq('id', patientId)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            alert('Patient information updated successfully!');
+            currentPatient = data;
+            isEditMode = false;
+            displayPatientInfo(currentPatient);
+            document.getElementById('editInfoBtn').innerHTML = '<span class="material-icons" style="font-size: 21px; color: #d8d8d8;">edit</span> Edit Info';
+            document.getElementById('editInfoBtn').disabled = false;
+        } catch (error) {
+            console.error('Error updating patient:', error);
+            alert('Error updating patient information: ' + error.message);
+        }
     }
 
     loadPatientDetails();

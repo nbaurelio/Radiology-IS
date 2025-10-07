@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Upload DICOM - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
+    <link rel="stylesheet" href="upload.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+<!-- Header will be injected here -->
+<div id="header-container"></div>
+
+<!-- Page content -->
+<main class="container">
+    <section class="grid">
+
+        <!-- Search and Add Upload Bar -->
+        <article class="card search-bar">
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search studies by patient, study ID, or modality..." />
+            </div>
+            <button class="add-patient-btn" id="addUploadBtn" aria-label="Upload DICOM">
+                <span class="plus-icon">+</span>
+            </button>
+        </article>
+
+        <!-- Studies List -->
+        <article class="card table-card">
+            <div class="hd">DICOM Studies (<span id="studyCount">0</span>)</div>
+            <div class="bd">
+                <div class="table-wrap">
+                    <table class="tbl">
+                        <thead>
+                        <tr>
+                            <th>Study ID</th>
+                            <th>Patient</th>
+                            <th>Modality</th>
+                            <th>Study Date</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody id="studiesTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 24px;">Loading studies...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </article>
+
+    </section>
+</main>
+
+<!-- Upload DICOM Modal -->
+<div class="modal" id="uploadModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div>
+                <h2>Upload DICOM Study</h2>
+                <p class="modal-subtitle">Upload DICOM files for a patient study</p>
+            </div>
+            <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="uploadForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="studyId">Study ID <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">description</span>
+                            <input type="text" id="studyId" class="form-input" placeholder="Ex: STU-001" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="patientName">Patient <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="patientName" class="form-input" placeholder="Ex: John Doe" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modality">Modality <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">medical_services</span>
+                            <select id="modality" class="form-input" required>
+                                <option value="">Select modality</option>
+                                <option value="CR">CR - Computed Radiography</option>
+                                <option value="CT">CT - Computed Tomography</option>
+                                <option value="MR">MR - Magnetic Resonance</option>
+                                <option value="US">US - Ultrasound</option>
+                                <option value="DX">DX - Digital Radiography</option>
+                                <option value="MG">MG - Mammography</option>
+                                <option value="NM">NM - Nuclear Medicine</option>
+                                <option value="PT">PT - Positron Emission Tomography</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="studyDate">Study Date <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">event</span>
+                            <input type="date" id="studyDate" class="form-input" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priority">Priority <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">priority_high</span>
+                            <select id="priority" class="form-input" required>
+                                <option value="">Select priority</option>
+                                <option value="routine">Routine</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="stat">STAT</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">info</span>
+                            <select id="status" class="form-input" required>
+                                <option value="">Select status</option>
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="description">Study Description</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">notes</span>
+                            <input type="text" id="description" class="form-input" placeholder="Ex: Chest X-Ray PA and Lateral" />
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-create" id="submitBtn">Create Study</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Load Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="../shared/header.js"></script>
+
+<script>
+    // Check if user is logged in
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    // Initialize header with smooth animations
+    headerComponent.initialize('upload');
+
+    // Modal functionality
+    const modal = document.getElementById('uploadModal');
+    const addBtn = document.getElementById('addUploadBtn');
+    const closeBtn = document.getElementById('closeModalBtn');
+    const form = document.getElementById('uploadForm');
+    const searchInput = document.getElementById('searchInput');
+
+    // Set today's date as default
+    document.getElementById('studyDate').valueAsDate = new Date();
+
+    // Open modal
+    addBtn.addEventListener('click', () => {
+        modal.style.display = 'flex';
+        form.reset();
+        document.getElementById('studyDate').valueAsDate = new Date();
+    });
+
+    // Close modal
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // Load studies (placeholder - will be implemented with database)
+    async function loadStudies() {
+        const tbody = document.getElementById('studiesTableBody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px;">Loading studies...</td></tr>';
+
+        // TODO: Replace with actual database call
+        setTimeout(() => {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 24px;">
+                        No studies found. Click + to upload a new DICOM study.
+                    </td>
+                </tr>
+            `;
+            document.getElementById('studyCount').textContent = '0';
+        }, 500);
+    }
+
+    // Display studies in table (placeholder)
+    function displayStudies(studies) {
+        const tbody = document.getElementById('studiesTableBody');
+        tbody.innerHTML = studies.map(study => {
+            const patientName = study.patient_name || 'Unknown Patient';
+
+            const priorityClass = study.priority === 'stat' ? 'badge-priority-stat' : 
+                                 study.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine';
+            
+            const statusClass = study.status === 'pending' ? 'badge-pending' :
+                               study.status === 'in_progress' ? 'badge-reading' : 'badge-done';
+
+            const priorityText = study.priority === 'stat' ? 'STAT' : 
+                                (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1).toLowerCase();
+            
+            const statusText = (study.status || 'pending').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+            const studyDate = study.study_date ? new Date(study.study_date).toLocaleDateString() : 'N/A';
+
+            return `
+                <tr onclick="window.location.href='study-detail.html?id=${study.id}'" style="cursor: pointer;">
+                    <td data-label="Study ID">${study.study_id || 'N/A'}</td>
+                    <td data-label="Patient">${patientName}</td>
+                    <td data-label="Modality">${study.modality || 'N/A'}</td>
+                    <td data-label="Study Date">${studyDate}</td>
+                    <td data-label="Priority">
+                        <span class="badge ${priorityClass}">${priorityText}</span>
+                    </td>
+                    <td data-label="Status">
+                        <span class="badge ${statusClass}">${statusText}</span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Search functionality (placeholder)
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            const searchTerm = e.target.value.trim();
+            if (searchTerm) {
+                // TODO: Implement search
+                console.log('Searching for:', searchTerm);
+            } else {
+                loadStudies();
+            }
+        }, 300);
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.textContent = 'Creating...';
+        submitBtn.disabled = true;
+        
+        const studyData = {
+            study_id: document.getElementById('studyId').value.trim(),
+            patient_name: document.getElementById('patientName').value.trim(),
+            modality: document.getElementById('modality').value,
+            study_date: document.getElementById('studyDate').value,
+            priority: document.getElementById('priority').value,
+            status: document.getElementById('status').value,
+            description: document.getElementById('description').value.trim() || null,
+            created_at: new Date().toISOString()
+        };
+        
+        try {
+            // TODO: Replace with actual database call
+            console.log('Creating study:', studyData);
+            
+            alert(`Study created successfully!\n\nStudy ID: ${studyData.study_id}\nModality: ${studyData.modality}\nPriority: ${studyData.priority}`);
+            form.reset();
+            modal.style.display = 'none';
+            loadStudies();
+        } catch (error) {
+            console.error('Error creating study:', error);
+            alert('An error occurred. Please try again.');
+        } finally {
+            submitBtn.textContent = 'Create Study';
+            submitBtn.disabled = false;
+        }
+    });
+
+    // Load studies on page load
+    loadStudies();
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>

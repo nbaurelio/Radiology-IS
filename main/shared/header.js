@@ -26,7 +26,7 @@ function createHeader(activePage) {
             <!-- Tabs with smooth transition -->
             <nav class="tabs" aria-label="Primary">
                 <a class="tab ${activePage === 'dashboard' ? 'active' : ''}" href="../Dashboard/dashboard.html">Dashboard</a>
-                <a class="tab ${activePage === 'upload' ? 'active' : ''}" href="#">Upload DICOM</a>
+                <a class="tab ${activePage === 'upload' ? 'active' : ''}" href="../Upload/upload-dicom.html">Upload DICOM</a>
                 <a class="tab ${activePage === 'reports' ? 'active' : ''}" href="../Reports/reports.html">Reports</a>
                 <a class="tab ${activePage === 'telehealth' ? 'active' : ''}" href="#">Telehealth</a>
                 <a class="tab ${activePage === 'patients' ? 'active' : ''}" href="../Patients/patients.html">Patients</a>
