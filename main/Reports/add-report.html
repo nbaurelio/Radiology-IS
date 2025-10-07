@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Add New Report - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
+    <link rel="stylesheet" href="reports.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        a[href="reports.html"]:hover {
+            border-color: var(--card-border-hover);
+        }
+
+        .form-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .form-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--card-border);
+        }
+
+        .form-section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--ink);
+        }
+
+        .form-section-subtitle {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 400;
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .required {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .input-with-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            font-size: 21px;
+            color: #d8d8d8;
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            font-size: 14px;
+            background: var(--panel);
+            color: var(--muted);
+            font-family: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px color-mix(in lab, var(--brand) 15%, transparent);
+        }
+
+        .form-input:hover {
+            border-color: var(--card-border-hover);
+        }
+
+        .form-input::placeholder {
+            color: #9ca3af;
+            font-weight: 400;
+        }
+
+        textarea.form-input {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+            padding-top: 12px;
+        }
+
+        select.form-input {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .btn-cancel {
+            padding: 12px 28px;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            background: var(--panel);
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background: var(--bg);
+            border-color: var(--card-border-hover);
+        }
+
+        .btn-create {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--brand), #7a5af8);
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 16px rgba(109,93,252,.25);
+        }
+
+        .btn-create:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(109,93,252,.35);
+        }
+
+        .btn-create:active {
+            transform: translateY(0);
+        }
+
+        .btn-create:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .helper-text {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .conditional-section {
+            display: none;
+            padding: 20px;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-top: 16px;
+            border: 1px dashed var(--card-border);
+        }
+
+        .conditional-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header will be injected here -->
+<div id="header-container"></div>
+
+<main class="container">
+    <div class="form-page">
+        <div style="margin-bottom: 20px;">
+            <a href="reports.html" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--panel); color: var(--ink); cursor: pointer; transition: border-color 0.2s ease; font-family: inherit; font-size: 14px; text-decoration: none; width: fit-content;">← Back to Reports</a>
+        </div>
+
+        <h1 style="font-size: 28px; margin-bottom: 24px; color: var(--text);">Add New Radiology Report</h1>
+
+        <form id="reportForm">
+            <!-- Patient Selection -->
+            <div class="form-section">
+                <h2 class="form-section-title">Patient Information</h2>
+                <p class="form-section-subtitle">Select the patient for this appointment</p>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="patientSelect">Patient <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <select id="patientSelect" class="form-input" required>
+                                <option value="">Loading patients...</option>
+                            </select>
+                        </div>
+                        <p class="helper-text">Only existing patients can be selected. Add a new patient first if needed.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Details -->
+            <div class="form-section">
+                <h2 class="form-section-title">Report Details</h2>
+                <p class="form-section-subtitle">Study and exam information</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="studyId">Study ID <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">description</span>
+                            <input type="text" id="studyId" class="form-input" placeholder="Ex: STU-2025-001" required />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="appointmentDate">Study/Appointment Date <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">event</span>
+                            <input type="datetime-local" id="appointmentDate" class="form-input" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="examType">Exam Type <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">medical_services</span>
+                            <select id="examType" class="form-input" required>
+                                <option value="">Select exam type</option>
+                                <option value="X-Ray">X-Ray</option>
+                                <option value="CT Scan">CT Scan</option>
+                                <option value="MRI">MRI</option>
+                                <option value="Ultrasound">Ultrasound</option>
+                                <option value="Mammography">Mammography</option>
+                                <option value="Fluoroscopy">Fluoroscopy</option>
+                                <option value="Nuclear Medicine">Nuclear Medicine</option>
+                                <option value="PET Scan">PET Scan</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modality">Modality <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">category</span>
+                            <select id="modality" class="form-input" required>
+                                <option value="">Select modality</option>
+                                <option value="CR">CR - Computed Radiography</option>
+                                <option value="CT">CT - Computed Tomography</option>
+                                <option value="MR">MR - Magnetic Resonance</option>
+                                <option value="US">US - Ultrasound</option>
+                                <option value="MG">MG - Mammography</option>
+                                <option value="XA">XA - X-Ray Angiography</option>
+                                <option value="NM">NM - Nuclear Medicine</option>
+                                <option value="PT">PT - PET Scan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">Priority <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">priority_high</span>
+                            <select id="priority" class="form-input" required>
+                                <option value="routine">Routine</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="stat">STAT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="status">Status <span class="required">*</span></label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">info</span>
+                            <select id="status" class="form-input" required>
+                                <option value="pending">Pending</option>
+                                <option value="reading">Reading</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignedRadiologist">Assigned Radiologist</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">person</span>
+                            <input type="text" id="assignedRadiologist" class="form-input" placeholder="Ex: Dr. Smith" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="notes">Notes</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon" style="top: 12px;">notes</span>
+                            <textarea id="notes" class="form-input" placeholder="Additional notes or instructions for this appointment"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+                <button type="submit" class="btn-create" id="submitBtn">Create Report</button>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="../shared/header.js"></script>
+
+<script>
+    // Check if user is logged in
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    // Initialize header
+    headerComponent.initialize('reports');
+
+    const form = document.getElementById('reportForm');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Load patients on page load
+    loadPatientsDropdown();
+
+    // Load patients for dropdown
+    async function loadPatientsDropdown() {
+        const patientSelect = document.getElementById('patientSelect');
+        patientSelect.innerHTML = '<option value="">Loading patients...</option>';
+        
+        const result = await reportService.getAllPatients();
+        
+        if (result.success && result.patients.length > 0) {
+            patientSelect.innerHTML = '<option value="">Select a patient</option>' +
+                result.patients.map(p => 
+                    `<option value="${p.id}">${p.first_name} ${p.last_name} (${p.patient_id})</option>`
+                ).join('');
+        } else {
+            patientSelect.innerHTML = '<option value="">No patients found</option>';
+        }
+    }
+
+    // Cancel button - go back to reports page
+    cancelBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+            window.location.href = 'reports.html';
+        }
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        submitBtn.textContent = 'Creating...';
+        submitBtn.disabled = true;
+        
+        const patientId = document.getElementById('patientSelect').value;
+        
+        if (!patientId) {
+            alert('Please select a patient');
+            submitBtn.textContent = 'Create Report';
+            submitBtn.disabled = false;
+            return;
+        }
+        
+        const reportData = {
+            patient_id: patientId,
+            study_id: document.getElementById('studyId').value.trim(),
+            appointment_date: document.getElementById('appointmentDate').value,
+            exam_type: document.getElementById('examType').value,
+            modality: document.getElementById('modality').value,
+            priority: document.getElementById('priority').value,
+            status: document.getElementById('status').value,
+            assigned_radiologist: document.getElementById('assignedRadiologist').value.trim() || null,
+            notes: document.getElementById('notes').value.trim() || null
+        };
+        
+        try {
+            const result = await reportService.createReport(reportData);
+            
+            if (result.success) {
+                alert(`Radiology report created successfully!\n\nStudy ID: ${reportData.study_id}\nExam Type: ${reportData.exam_type}\nDate: ${new Date(reportData.appointment_date).toLocaleString()}`);
+                window.location.href = 'reports.html';
+            } else {
+                alert(`Error creating report: ${result.message}`);
+                submitBtn.textContent = 'Create Report';
+                submitBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error creating report:', error);
+            alert('An unexpected error occurred. Please try again.');
+            submitBtn.textContent = 'Create Report';
+            submitBtn.disabled = false;
+        }
+    });
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Report Details - Radiology IS</title>
+    <link rel="stylesheet" href="../shared/common.css">
+    <link rel="stylesheet" href="reports.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        #editReportBtn:hover, #backToReports:hover {
+            border-color: var(--card-border-hover);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: var(--panel);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+
+        .info-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: var(--ink);
+            font-weight: 500;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: var(--line);
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header will be injected here -->
+<div id="header-container"></div>
+
+<main class="container">
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <a id="backToReports" href="reports.html" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--panel); color: var(--ink); cursor: pointer; transition: border-color 0.2s ease; font-family: inherit; font-size: 14px; text-decoration: none;">← Back to Reports</a>
+        <button id="editReportBtn" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: var(--radius); background: var(--panel); color: var(--ink); cursor: pointer; transition: border-color 0.2s ease; font-family: inherit; font-size: 14px;">
+            <span class="material-icons" style="font-size: 21px; color: #d8d8d8;">edit</span>
+            Edit Report
+        </button>
+    </div>
+
+    <section class="grid">
+        <!-- Report Information -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Report Information</div>
+            <div class="bd">
+                <div id="reportDetailContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading report details...</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Patient Information -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Patient Information</div>
+            <div class="bd">
+                <div id="patientInfoContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading patient information...</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Study Details -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Study Details</div>
+            <div class="bd">
+                <div id="studyDetailsContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading study details...</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Report Findings -->
+        <article class="card" style="grid-column: 1 / -1;">
+            <div class="hd">Report Findings & Notes</div>
+            <div class="bd">
+                <div id="reportFindingsContent" style="padding: 20px;">
+                    <p style="text-align: center; color: var(--muted);">Loading findings...</p>
+                </div>
+            </div>
+        </article>
+    </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/supabase-config.js"></script>
+<script src="../shared/header.js"></script>
+
+<script>
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        window.location.href = '../Login/login.html';
+    }
+
+    // Initialize header with smooth animations
+    headerComponent.initialize('reports');
+
+    // Get report ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const reportId = urlParams.get('id');
+
+    if (!reportId) {
+        window.location.href = 'reports.html';
+    }
+
+    let currentReport = null;
+    let isEditMode = false;
+
+    async function loadReportDetails() {
+        try {
+            // Get report details
+            const { data: report, error: reportError } = await supabase
+                .from('reports')
+                .select(`
+                    *,
+                    patients(*)
+                `)
+                .eq('id', reportId)
+                .single();
+
+            if (reportError) throw reportError;
+
+            currentReport = report;
+            displayReportInfo(report);
+            displayPatientInfo(report.patients);
+            displayStudyDetails(report);
+            displayReportFindings(report);
+        } catch (error) {
+            console.error('Error loading report:', error);
+            document.getElementById('reportDetailContent').innerHTML = 
+                `<p style="color: #ef4444; text-align: center;">Error loading report details</p>`;
+        }
+    }
+
+    function displayReportInfo(report) {
+        const content = document.getElementById('reportDetailContent');
+        
+        if (isEditMode) {
+            content.innerHTML = `
+                <form id="editReportForm" style="width: 100%;">
+                    <div class="info-grid">
+                        <div>
+                            <label class="info-label">Study ID</label>
+                            <input type="text" id="edit_study_id" value="${report.study_id || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" required />
+                        </div>
+                        <div>
+                            <label class="info-label">Exam Type</label>
+                            <select id="edit_exam_type" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" required>
+                                <option value="X-Ray" ${report.exam_type === 'X-Ray' ? 'selected' : ''}>X-Ray</option>
+                                <option value="CT Scan" ${report.exam_type === 'CT Scan' ? 'selected' : ''}>CT Scan</option>
+                                <option value="MRI" ${report.exam_type === 'MRI' ? 'selected' : ''}>MRI</option>
+                                <option value="Ultrasound" ${report.exam_type === 'Ultrasound' ? 'selected' : ''}>Ultrasound</option>
+                                <option value="Mammography" ${report.exam_type === 'Mammography' ? 'selected' : ''}>Mammography</option>
+                                <option value="Fluoroscopy" ${report.exam_type === 'Fluoroscopy' ? 'selected' : ''}>Fluoroscopy</option>
+                                <option value="Nuclear Medicine" ${report.exam_type === 'Nuclear Medicine' ? 'selected' : ''}>Nuclear Medicine</option>
+                                <option value="PET Scan" ${report.exam_type === 'PET Scan' ? 'selected' : ''}>PET Scan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="info-label">Modality</label>
+                            <select id="edit_modality" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);">
+                                <option value="CR" ${report.modality === 'CR' ? 'selected' : ''}>CR - Computed Radiography</option>
+                                <option value="CT" ${report.modality === 'CT' ? 'selected' : ''}>CT - Computed Tomography</option>
+                                <option value="MR" ${report.modality === 'MR' ? 'selected' : ''}>MR - Magnetic Resonance</option>
+                                <option value="US" ${report.modality === 'US' ? 'selected' : ''}>US - Ultrasound</option>
+                                <option value="MG" ${report.modality === 'MG' ? 'selected' : ''}>MG - Mammography</option>
+                                <option value="XA" ${report.modality === 'XA' ? 'selected' : ''}>XA - X-Ray Angiography</option>
+                                <option value="NM" ${report.modality === 'NM' ? 'selected' : ''}>NM - Nuclear Medicine</option>
+                                <option value="PT" ${report.modality === 'PT' ? 'selected' : ''}>PT - PET Scan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="info-label">Priority</label>
+                            <select id="edit_priority" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);">
+                                <option value="routine" ${report.priority === 'routine' ? 'selected' : ''}>Routine</option>
+                                <option value="urgent" ${report.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+                                <option value="stat" ${report.priority === 'stat' ? 'selected' : ''}>STAT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="info-label">Status</label>
+                            <select id="edit_status" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);">
+                                <option value="pending" ${report.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                <option value="reading" ${report.status === 'reading' ? 'selected' : ''}>Reading</option>
+                                <option value="completed" ${report.status === 'completed' ? 'selected' : ''}>Completed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="info-label">Assigned Radiologist</label>
+                            <input type="text" id="edit_assigned_radiologist" value="${report.assigned_radiologist || ''}" style="width: 100%; padding: 8px 12px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--panel); color: var(--muted);" />
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" onclick="cancelEdit()" class="btn" style="border: 1px solid var(--card-border); padding: 8px 16px; border-radius: 6px; background: var(--panel); cursor: pointer;">Cancel</button>
+                        <button type="submit" class="btn" style="background: linear-gradient(135deg, var(--brand), #7a5af8); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Save Changes</button>
+                    </div>
+                </form>
+            `;
+            
+            document.getElementById('editReportForm').addEventListener('submit', saveReportInfo);
+        } else {
+            const statusClass = report.status === 'pending' ? 'badge-pending' :
+                               report.status === 'reading' ? 'badge-reading' : 'badge-done';
+            
+            const priorityClass = report.priority === 'stat' ? 'badge-priority-stat' : 
+                                 report.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine';
+
+            const priorityText = report.priority === 'stat' ? 'STAT' : 
+                                (report.priority || 'routine').charAt(0).toUpperCase() + (report.priority || 'routine').slice(1);
+
+            content.innerHTML = `
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Study ID</div>
+                        <div class="info-value">${report.study_id || 'N/A'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Exam Type</div>
+                        <div class="info-value">${report.exam_type || 'N/A'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Modality</div>
+                        <div class="info-value">${report.modality || 'N/A'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Priority</div>
+                        <div class="info-value"><span class="badge ${priorityClass}">${priorityText}</span></div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Status</div>
+                        <div class="info-value"><span class="badge ${statusClass}">${report.status ? report.status.toUpperCase() : 'N/A'}</span></div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Assigned Radiologist</div>
+                        <div class="info-value">${report.assigned_radiologist || 'Unassigned'}</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function displayPatientInfo(patient) {
+        const content = document.getElementById('patientInfoContent');
+        
+        if (!patient) {
+            content.innerHTML = '<p style="color: var(--muted);">No patient information available</p>';
+            return;
+        }
+
+        const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
+
+        content.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Patient Name</div>
+                            <div style="font-size: 20px; color: var(--ink); font-weight: 600;">${fullName}</div>
+                        </div>
+                        <div style="height: 40px; width: 1px; background: var(--line);"></div>
+                        <div>
+                            <div style="font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Patient ID</div>
+                            <div style="font-size: 20px; color: var(--ink); font-weight: 600;">${patient.patient_id || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="window.location.href='../Patients/patient-detail.html?id=${patient.id}'" style="display: flex; align-items: center; gap: 8px; padding: 10px 20px; border: 1px solid var(--card-border); border-radius: 8px; background: var(--panel); color: var(--ink); cursor: pointer; transition: all 0.2s ease; font-family: inherit; font-size: 14px; font-weight: 500;">
+                    <span class="material-icons" style="font-size: 20px;">person</span>
+                    View Patient Details
+                </button>
+            </div>
+        `;
+    }
+
+    function displayStudyDetails(report) {
+        const content = document.getElementById('studyDetailsContent');
+        
+        const studyDate = report.study_date ? new Date(report.study_date).toLocaleString() : 'N/A';
+        const schedule = report.schedule ? new Date(report.schedule).toLocaleString() : 'N/A';
+        const createdAt = report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A';
+        const updatedAt = report.updated_at ? new Date(report.updated_at).toLocaleString() : 'N/A';
+
+        content.innerHTML = `
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-label">Study Date</div>
+                    <div class="info-value">${studyDate}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Scheduled Date</div>
+                    <div class="info-value">${schedule}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Report Status</div>
+                    <div class="info-value">${report.report_status || 'Draft'}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Created At</div>
+                    <div class="info-value">${createdAt}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Last Updated</div>
+                    <div class="info-value">${updatedAt}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Notification Sent</div>
+                    <div class="info-value">${report.notification_sent ? 'Yes' : 'No'}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    function displayReportFindings(report) {
+        const content = document.getElementById('reportFindingsContent');
+        
+        content.innerHTML = `
+            <div style="background: var(--panel); padding: 16px; border-radius: 8px; border: 1px solid var(--card-border);">
+                <h3 style="margin: 0 0 12px 0; color: var(--ink); font-size: 14px; font-weight: 600;">Notes</h3>
+                <p style="margin: 0; color: var(--muted); white-space: pre-wrap;">${report.notes || 'No notes available'}</p>
+            </div>
+            ${report.dicom_file_url ? `
+                <div style="margin-top: 16px; background: var(--panel); padding: 16px; border-radius: 8px; border: 1px solid var(--card-border);">
+                    <h3 style="margin: 0 0 12px 0; color: var(--ink); font-size: 14px; font-weight: 600;">DICOM Files</h3>
+                    <a href="${report.dicom_file_url}" target="_blank" style="color: var(--brand); text-decoration: none;">
+                        View DICOM Files →
+                    </a>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    function calculateAge(dateOfBirth) {
+        const today = new Date();
+        const birthDate = new Date(dateOfBirth);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        return age + ' years';
+    }
+
+    // Edit button functionality
+    document.getElementById('editReportBtn').addEventListener('click', () => {
+        isEditMode = true;
+        displayReportInfo(currentReport);
+        document.getElementById('editReportBtn').textContent = 'Editing...';
+        document.getElementById('editReportBtn').disabled = true;
+    });
+
+    // Cancel edit
+    function cancelEdit() {
+        isEditMode = false;
+        displayReportInfo(currentReport);
+        document.getElementById('editReportBtn').innerHTML = '<span class="material-icons" style="font-size: 21px; color: #d8d8d8;">edit</span> Edit Report';
+        document.getElementById('editReportBtn').disabled = false;
+    }
+
+    // Save report info
+    async function saveReportInfo(e) {
+        e.preventDefault();
+        
+        const updatedData = {
+            study_id: document.getElementById('edit_study_id').value.trim(),
+            exam_type: document.getElementById('edit_exam_type').value,
+            modality: document.getElementById('edit_modality').value,
+            priority: document.getElementById('edit_priority').value,
+            status: document.getElementById('edit_status').value,
+            assigned_radiologist: document.getElementById('edit_assigned_radiologist').value.trim() || null,
+            updated_at: new Date().toISOString(),
+            last_updated: new Date().toISOString()
+        };
+
+        try {
+            const { data, error } = await supabase
+                .from('reports')
+                .update(updatedData)
+                .eq('id', reportId)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            alert('Report updated successfully!');
+            currentReport = { ...currentReport, ...data };
+            isEditMode = false;
+            displayReportInfo(currentReport);
+            displayStudyDetails(currentReport);
+            document.getElementById('editReportBtn').innerHTML = '<span class="material-icons" style="font-size: 21px; color: #d8d8d8;">edit</span> Edit Report';
+            document.getElementById('editReportBtn').disabled = false;
+        } catch (error) {
+            console.error('Error updating report:', error);
+            alert('Error updating report: ' + error.message);
+        }
+    }
+
+    loadReportDetails();
+</script>
+
+<script src="../shared/theme-toggle.js"></script>
+</body>
+</html>

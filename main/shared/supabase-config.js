@@ -219,15 +219,12 @@ const patientDetailService = {
 
             if (patientError) throw patientError;
 
-            // Get patient's appointments with study information
-            const { data: appointments, error: appointmentsError } = await supabase
-                .from('appointments')
-                .select(`
-                    *,
-                    studies(study_id)
-                `)
+            // Get patient's reports (these will be shown as appointments)
+            const { data: reports, error: reportsError } = await supabase
+                .from('reports')
+                .select('*')
                 .eq('patient_id', patientId)
-                .order('appointment_date', { ascending: false });
+                .order('created_at', { ascending: false });
 
             // Get patient's studies
             const { data: studies, error: studiesError } = await supabase
@@ -239,7 +236,7 @@ const patientDetailService = {
             return {
                 success: true,
                 patient: patient,
-                appointments: appointments || [],
+                appointments: reports || [], // Use reports as appointments
                 studies: studies || []
             };
         } catch (error) {
@@ -251,52 +248,125 @@ const patientDetailService = {
 
 // Report Service
 const reportService = {
-    // Get all reports with patient and radiologist info
+    // Get all radiology reports with patient info
     async getAllReports(limit = 50) {
         try {
-            const { data, error } = await supabase
+            const { data: reports, error: reportsError } = await supabase
                 .from('reports')
-                .select('*')
+                .select(`
+                    *,
+                    patients(id, patient_id, first_name, last_name)
+                `)
                 .order('created_at', { ascending: false })
                 .limit(limit);
 
-            if (error) throw error;
-            return { success: true, reports: data };
+            if (reportsError) {
+                console.error('Supabase error in getAllReports:', reportsError);
+                throw reportsError;
+            }
+            
+            return { success: true, reports: reports || [] };
         } catch (error) {
             console.error('Get reports error:', error);
-            return { success: false, message: error.message };
+            return { success: false, message: error.message, reports: [] };
         }
     },
 
-    // Search reports
+    // Search reports by patient name, exam type, study ID, or status
     async searchReports(searchTerm) {
         try {
-            const { data, error } = await supabase
+            const { data: reports, error: reportsError } = await supabase
                 .from('reports')
-                .select('*')
-                .or(`study_id.ilike.%${searchTerm}%,exam_type.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%,assigned_radiologist.ilike.%${searchTerm}%`)
+                .select(`
+                    *,
+                    patients(id, patient_id, first_name, last_name)
+                `)
+                .or(`study_id.ilike.%${searchTerm}%,exam_type.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,notes.ilike.%${searchTerm}%,assigned_radiologist.ilike.%${searchTerm}%`)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            return { success: true, reports: data };
+            if (reportsError) {
+                console.error('Supabase error in searchReports:', reportsError);
+                throw reportsError;
+            }
+            
+            return { success: true, reports: reports || [] };
         } catch (error) {
             console.error('Search reports error:', error);
+            return { success: false, message: error.message, reports: [] };
+        }
+    },
+
+    // Create new radiology report
+    async createReport(reportData) {
+        try {
+            // First, verify patient exists
+            const { data: patient, error: patientError } = await supabase
+                .from('patients')
+                .select('id, first_name, last_name')
+                .eq('id', reportData.patient_id)
+                .single();
+
+            if (patientError || !patient) {
+                return { success: false, message: 'Patient does not exist. Please select a valid patient.' };
+            }
+
+            // Create the radiology report
+            const currentUser = authService.getCurrentUser();
+            
+            // Try without report_status first to see if it has a default
+            const insertData = {
+                study_id: reportData.study_id || null,
+                patient_id: reportData.patient_id,
+                name: `${patient.first_name} ${patient.last_name}`,
+                exam_type: reportData.exam_type,
+                study_date: reportData.study_date || reportData.appointment_date,
+                schedule: reportData.appointment_date || null,
+                status: reportData.status || 'pending',
+                modality: reportData.modality || null,
+                priority: reportData.priority || 'routine',
+                assigned_radiologist: reportData.assigned_radiologist || null,
+                assigned_radiologist_id: reportData.assigned_radiologist_id || null,
+                notes: reportData.notes || null,
+                created_by: currentUser?.id || null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                last_updated: new Date().toISOString(),
+                notification_sent: false
+            };
+            
+            console.log('Attempting to insert report with data:', insertData);
+            
+            const { data: report, error: reportError } = await supabase
+                .from('reports')
+                .insert([insertData])
+                .select()
+                .single();
+
+            if (reportError) {
+                console.error('Report insert error details:', reportError);
+                throw reportError;
+            }
+
+            return { success: true, report: report };
+        } catch (error) {
+            console.error('Create report error:', error);
+            console.error('Error details:', error.details, error.hint, error.code);
             return { success: false, message: error.message };
         }
     },
 
-    // Create new report
-    async createReport(reportData) {
+    // Get all patients for dropdown
+    async getAllPatients() {
         try {
             const { data, error } = await supabase
-                .from('reports')
-                .insert([reportData])
-                .select();
+                .from('patients')
+                .select('id, patient_id, first_name, last_name')
+                .order('first_name', { ascending: true });
 
             if (error) throw error;
-            return { success: true, report: data[0] };
+            return { success: true, patients: data };
         } catch (error) {
-            console.error('Create report error:', error);
+            console.error('Get patients error:', error);
             return { success: false, message: error.message };
         }
     }
