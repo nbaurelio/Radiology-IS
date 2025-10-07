@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=cloud_upload" />
 </head>
 <body>
 
@@ -60,98 +61,83 @@
 
 <!-- Upload DICOM Modal -->
 <div class="modal" id="uploadModal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 800px;">
         <div class="modal-header">
             <div>
                 <h2>Upload DICOM Study</h2>
-                <p class="modal-subtitle">Upload DICOM files for a patient study</p>
+                <p class="modal-subtitle">Upload DICOM files (.dcm, .dicom) or compressed archives (.zip)</p>
             </div>
             <button class="close-btn" id="closeModalBtn">&times;</button>
         </div>
         <div class="modal-body">
             <form id="uploadForm">
+                <!-- Patient Selection -->
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="studyId">Study ID <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">description</span>
-                            <input type="text" id="studyId" class="form-input" placeholder="Ex: STU-001" required />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="patientName">Patient <span class="required">*</span></label>
+                    <div class="form-group full-width">
+                        <label for="patientSelect">Select Patient <span class="required">*</span></label>
                         <div class="input-with-icon">
                             <span class="material-icons input-icon">person</span>
-                            <input type="text" id="patientName" class="form-input" placeholder="Ex: John Doe" required />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="modality">Modality <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">medical_services</span>
-                            <select id="modality" class="form-input" required>
-                                <option value="">Select modality</option>
-                                <option value="CR">CR - Computed Radiography</option>
-                                <option value="CT">CT - Computed Tomography</option>
-                                <option value="MR">MR - Magnetic Resonance</option>
-                                <option value="US">US - Ultrasound</option>
-                                <option value="DX">DX - Digital Radiography</option>
-                                <option value="MG">MG - Mammography</option>
-                                <option value="NM">NM - Nuclear Medicine</option>
-                                <option value="PT">PT - Positron Emission Tomography</option>
+                            <select id="patientSelect" class="form-input" required>
+                                <option value="">Loading patients...</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="studyDate">Study Date <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">event</span>
-                            <input type="date" id="studyDate" class="form-input" required />
-                        </div>
+                        <small style="color: var(--muted); margin-top: 4px; display: block;">Patient ID is required for study association</small>
                     </div>
                 </div>
 
-                <div class="form-row">
+                <!-- Drag and Drop Upload Area -->
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" multiple accept=".dcm,.dicom,.zip" style="display: none;" />
+                    <div class="upload-zone-content" id="uploadZoneContent">
+                        <span class="material-symbols-outlined" style="font-size: 64px; color: #6c5cfb; margin-bottom: 16px;">cloud_upload</span>
+                        <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--ink);">Drag & Drop DICOM Files</h3>
+                        <p style="margin: 0 0 16px 0; color: var(--muted);">or click to browse</p>
+                        <button type="button" class="btn" id="browseBtn" style="background: var(--brand); color: white; border: none;">Browse Files</button>
+                        <p style="margin: 16px 0 0 0; font-size: 12px; color: var(--muted);">Supported: .dcm, .dicom, .zip (Max 2GB per file)</p>
+                    </div>
+                </div>
+
+                <!-- File List -->
+                <div id="fileListContainer" style="display: none; margin-top: 20px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--ink);">Selected Files (<span id="fileCount">0</span>)</h4>
+                    <div id="fileList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px;"></div>
+                </div>
+
+                <!-- Study Metadata -->
+                <div class="form-row" style="margin-top: 20px;">
                     <div class="form-group">
-                        <label for="priority">Priority <span class="required">*</span></label>
+                        <label for="clinicalHistory">Clinical History</label>
+                        <div class="input-with-icon">
+                            <span class="material-icons input-icon">notes</span>
+                            <input type="text" id="clinicalHistory" class="form-input" placeholder="Ex: Suspected pneumonia" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="examPriority">Exam Priority <span class="required">*</span></label>
                         <div class="input-with-icon">
                             <span class="material-icons input-icon">priority_high</span>
-                            <select id="priority" class="form-input" required>
-                                <option value="">Select priority</option>
+                            <select id="examPriority" class="form-input" required>
                                 <option value="routine">Routine</option>
                                 <option value="urgent">Urgent</option>
                                 <option value="stat">STAT</option>
                             </select>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="status">Status <span class="required">*</span></label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">info</span>
-                            <select id="status" class="form-input" required>
-                                <option value="">Select status</option>
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                            </select>
-                        </div>
-                    </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group full-width">
-                        <label for="description">Study Description</label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">notes</span>
-                            <input type="text" id="description" class="form-input" placeholder="Ex: Chest X-Ray PA and Lateral" />
-                        </div>
+                <!-- Upload Progress -->
+                <div id="uploadProgress" style="display: none; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 14px; font-weight: 600; color: var(--ink);">Uploading...</span>
+                        <span id="progressPercent" style="font-size: 14px; color: var(--muted);">0%</span>
                     </div>
+                    <div style="width: 100%; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden;">
+                        <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--brand), #7a5af8); transition: width 0.3s ease;"></div>
+                    </div>
+                    <p id="uploadStatus" style="margin: 8px 0 0 0; font-size: 12px; color: var(--muted);"></p>
                 </div>
 
-                <button type="submit" class="btn-create" id="submitBtn">Create Study</button>
+                <button type="submit" class="btn-create" id="submitBtn" style="margin-top: 20px;">Upload Study</button>
             </form>
         </div>
     </div>
@@ -178,28 +164,159 @@
     const closeBtn = document.getElementById('closeModalBtn');
     const form = document.getElementById('uploadForm');
     const searchInput = document.getElementById('searchInput');
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileList = document.getElementById('fileList');
+    const fileCountSpan = document.getElementById('fileCount');
+    
+    let selectedFiles = [];
 
-    // Set today's date as default
-    document.getElementById('studyDate').valueAsDate = new Date();
+    // Load patients for dropdown
+    async function loadPatients() {
+        const select = document.getElementById('patientSelect');
+        const result = await patientService.getAllPatients();
+        
+        if (result.success && result.patients.length > 0) {
+            select.innerHTML = '<option value="">Select a patient</option>' +
+                result.patients.map(p => 
+                    `<option value="${p.id}">${p.patient_id} - ${p.first_name} ${p.last_name}</option>`
+                ).join('');
+        } else {
+            select.innerHTML = '<option value="">No patients found</option>';
+        }
+    }
 
     // Open modal
     addBtn.addEventListener('click', () => {
         modal.style.display = 'flex';
         form.reset();
-        document.getElementById('studyDate').valueAsDate = new Date();
+        selectedFiles = [];
+        updateFileList();
+        loadPatients();
     });
 
     // Close modal
     closeBtn.addEventListener('click', () => {
         modal.style.display = 'none';
+        selectedFiles = [];
+        updateFileList();
     });
 
     // Close modal when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.style.display = 'none';
+            selectedFiles = [];
+            updateFileList();
         }
     });
+
+    // Browse button click
+    browseBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Upload zone click
+    uploadZone.addEventListener('click', (e) => {
+        if (e.target === uploadZone || e.target.closest('.upload-zone-content')) {
+            fileInput.click();
+        }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    // Drag and drop handlers
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    // Handle file selection
+    function handleFiles(files) {
+        const validFiles = [];
+        const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
+        const validExtensions = ['.dcm', '.dicom', '.zip'];
+        
+        for (let file of files) {
+            // Check file size
+            if (file.size > maxSize) {
+                alert(`File "${file.name}" exceeds 2GB limit and will be skipped.`);
+                continue;
+            }
+            
+            // Check file extension
+            const fileName = file.name.toLowerCase();
+            const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+            
+            if (!hasValidExtension) {
+                alert(`File "${file.name}" has invalid extension. Only .dcm, .dicom, and .zip files are supported.`);
+                continue;
+            }
+            
+            validFiles.push(file);
+        }
+        
+        if (validFiles.length > 0) {
+            selectedFiles = [...selectedFiles, ...validFiles];
+            updateFileList();
+        }
+    }
+
+    // Update file list display
+    function updateFileList() {
+        if (selectedFiles.length === 0) {
+            fileListContainer.style.display = 'none';
+            return;
+        }
+        
+        fileListContainer.style.display = 'block';
+        fileCountSpan.textContent = selectedFiles.length;
+        
+        fileList.innerHTML = selectedFiles.map((file, index) => {
+            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+            const fileIcon = file.name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file';
+            
+            return `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <span class="material-icons" style="color: var(--brand);">${fileIcon}</span>
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="file-item-name">${file.name}</div>
+                            <div class="file-item-size">${sizeInMB} MB</div>
+                        </div>
+                    </div>
+                    <div class="file-item-status">
+                        <span class="badge badge-pending">Ready</span>
+                        <button type="button" class="file-remove-btn" onclick="removeFile(${index})">
+                            <span class="material-icons" style="font-size: 18px;">close</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Remove file from list
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        updateFileList();
+    };
 
     // Load studies (placeholder - will be implemented with database)
     async function loadStudies() {
@@ -274,37 +391,98 @@
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.textContent = 'Creating...';
-        submitBtn.disabled = true;
+        // Validate patient selection
+        const patientId = document.getElementById('patientSelect').value;
+        if (!patientId) {
+            alert('Please select a patient');
+            return;
+        }
         
-        const studyData = {
-            study_id: document.getElementById('studyId').value.trim(),
-            patient_name: document.getElementById('patientName').value.trim(),
-            modality: document.getElementById('modality').value,
-            study_date: document.getElementById('studyDate').value,
-            priority: document.getElementById('priority').value,
-            status: document.getElementById('status').value,
-            description: document.getElementById('description').value.trim() || null,
-            created_at: new Date().toISOString()
-        };
+        // Validate files
+        if (selectedFiles.length === 0) {
+            alert('Please select at least one DICOM file to upload');
+            return;
+        }
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const progressDiv = document.getElementById('uploadProgress');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const uploadStatus = document.getElementById('uploadStatus');
+        
+        submitBtn.textContent = 'Uploading...';
+        submitBtn.disabled = true;
+        progressDiv.style.display = 'block';
         
         try {
-            // TODO: Replace with actual database call
-            console.log('Creating study:', studyData);
+            // Simulate upload progress (in real implementation, this would be actual file upload)
+            uploadStatus.textContent = 'Validating files...';
+            await simulateProgress(progressBar, progressPercent, 0, 30, 500);
             
-            alert(`Study created successfully!\n\nStudy ID: ${studyData.study_id}\nModality: ${studyData.modality}\nPriority: ${studyData.priority}`);
+            uploadStatus.textContent = 'Extracting DICOM metadata...';
+            await simulateProgress(progressBar, progressPercent, 30, 60, 800);
+            
+            uploadStatus.textContent = 'Uploading files to server...';
+            await simulateProgress(progressBar, progressPercent, 60, 90, 1000);
+            
+            // Create study record
+            const studyData = {
+                patient_id: patientId,
+                clinical_history: document.getElementById('clinicalHistory').value.trim() || null,
+                priority: document.getElementById('examPriority').value,
+                status: 'pending',
+                file_count: selectedFiles.length,
+                total_size: selectedFiles.reduce((sum, file) => sum + file.size, 0),
+                created_at: new Date().toISOString(),
+                created_by: currentUser.id
+            };
+            
+            uploadStatus.textContent = 'Creating study record...';
+            await simulateProgress(progressBar, progressPercent, 90, 100, 300);
+            
+            // TODO: Replace with actual database call and file upload
+            console.log('Study data:', studyData);
+            console.log('Files to upload:', selectedFiles);
+            
+            alert(`Upload successful!\n\n${selectedFiles.length} file(s) uploaded\nTotal size: ${(studyData.total_size / (1024 * 1024)).toFixed(2)} MB`);
+            
             form.reset();
+            selectedFiles = [];
+            updateFileList();
             modal.style.display = 'none';
+            progressDiv.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
             loadStudies();
         } catch (error) {
-            console.error('Error creating study:', error);
-            alert('An error occurred. Please try again.');
+            console.error('Error uploading study:', error);
+            alert('An error occurred during upload. Please try again.');
         } finally {
-            submitBtn.textContent = 'Create Study';
+            submitBtn.textContent = 'Upload Study';
             submitBtn.disabled = false;
         }
     });
+    
+    // Simulate upload progress
+    function simulateProgress(progressBar, progressPercent, start, end, duration) {
+        return new Promise(resolve => {
+            const steps = 20;
+            const increment = (end - start) / steps;
+            const stepDuration = duration / steps;
+            let current = start;
+            
+            const interval = setInterval(() => {
+                current += increment;
+                if (current >= end) {
+                    current = end;
+                    clearInterval(interval);
+                    resolve();
+                }
+                progressBar.style.width = current + '%';
+                progressPercent.textContent = Math.round(current) + '%';
+            }, stepDuration);
+        });
+    }
 
     // Load studies on page load
     loadStudies();

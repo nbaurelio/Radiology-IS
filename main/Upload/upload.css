@@ -418,6 +418,101 @@ select.form-input{
   color:#3730A3; 
 }
 
+/* Upload Zone Styles */
+.upload-zone {
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--bg);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.upload-zone:hover {
+  border-color: var(--brand);
+  background: color-mix(in lab, var(--brand) 5%, var(--bg));
+}
+
+.upload-zone.drag-over {
+  border-color: var(--brand);
+  background: color-mix(in lab, var(--brand) 10%, var(--bg));
+  border-style: solid;
+}
+
+.upload-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+/* File List Item */
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: background 0.2s ease;
+}
+
+.file-item:hover {
+  background: var(--bg);
+}
+
+.file-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-item-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-item-size {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.file-item-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-remove-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.file-remove-btn:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 /* Mobile responsive: card-style rows */
 @media (max-width: 640px){
   .tbl thead{ display:none; }
@@ -438,5 +533,9 @@ select.form-input{
     content: attr(data-label);
     color: var(--muted);
     font-weight:600;
+  }
+  
+  .upload-zone {
+    padding: 30px 15px;
   }
 }
