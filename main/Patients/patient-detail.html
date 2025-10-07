@@ -238,27 +238,43 @@
         const content = document.getElementById('appointmentsContent');
         
         if (appointments.length === 0) {
-            content.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--muted);">No appointments scheduled</p>';
+            content.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--muted);">No studies or reports found</p>';
             return;
         }
 
         const appointmentsList = appointments.map(apt => {
-            const dateStr = formatDateTime(apt.study_date || apt.schedule);
+            const dateStr = formatDateTime(apt.created_at || apt.study_date || apt.schedule);
             const status = apt.status || 'pending';
             const statusClass = getStatusBadgeClass(status);
             const studyId = apt.study_id || 'N/A';
             
+            // Determine if it's a study or report
+            const isStudy = apt.type === 'study';
+            const typeLabel = isStudy ? '📁 DICOM Study' : '📄 Report';
+            const title = isStudy ? 'DICOM Study Upload' : (apt.exam_type || 'Radiology Report');
+            const description = isStudy ? 
+                (apt.clinical_history || 'No clinical history provided') : 
+                (apt.notes || 'No notes provided');
+            
+            // Get file count for studies
+            const fileInfo = isStudy && apt.dicom_files ? 
+                `<span style="color: var(--muted); font-size: 13px;">${apt.dicom_files.length} DICOM file(s)</span><br>` : '';
+            
             return `
-                <div style="padding: 16px; border-bottom: 1px solid var(--line);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>${apt.exam_type}</strong><br>
+                <div style="padding: 16px; border-bottom: 1px solid var(--line); cursor: pointer;" onclick="window.location.href='${isStudy ? '../Upload/study-detail.html' : '../Reports/report-detail.html'}?id=${apt.id}'">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span style="font-size: 14px;">${typeLabel}</span>
+                                <strong>${title}</strong>
+                            </div>
                             <span style="color: var(--muted); font-size: 14px;">${dateStr}</span><br>
-                            <span style="color: var(--muted); font-size: 13px;">Study ID: ${studyId}</span>
+                            <span style="color: var(--muted); font-size: 13px;">Study ID: ${studyId}</span><br>
+                            ${fileInfo}
+                            <p style="margin: 8px 0 0 0; font-size: 14px; color: var(--muted);">${description}</p>
                         </div>
                         <span class="badge ${statusClass}">${status.toUpperCase()}</span>
                     </div>
-                    ${apt.notes ? `<p style="margin-top: 8px; font-size: 14px; color: var(--muted);">${apt.notes}</p>` : ''}
                 </div>
             `;
         }).join('');

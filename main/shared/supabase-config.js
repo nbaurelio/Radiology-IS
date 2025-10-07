@@ -385,7 +385,7 @@ const studyService = {
 
 // Patient detail functions
 const patientDetailService = {
-    // Get full patient details with appointments and studies
+    // Get full patient details with reports and studies
     async getPatientDetail(patientId) {
         try {
             // Get patient info
@@ -397,7 +397,7 @@ const patientDetailService = {
 
             if (patientError) throw patientError;
 
-            // Get patient's reports (these will be shown as appointments)
+            // Get patient's reports
             const { data: reports, error: reportsError } = await supabase
                 .from('reports')
                 .select('*')
@@ -408,13 +408,23 @@ const patientDetailService = {
             const { data: studies, error: studiesError } = await supabase
                 .from('studies')
                 .select('*')
-                .eq('patient_id', patientId)
-                .order('study_date', { ascending: false });
+                .eq('patient_uuid', patientId)
+                .order('created_at', { ascending: false });
+
+            // Combine reports and studies for appointments section
+            // Only show studies that are pending or reading (not completed, since they have reports)
+            const pendingStudies = (studies || []).filter(s => s.status !== 'completed');
+            
+            const combinedAppointments = [
+                ...(reports || []).map(r => ({ ...r, type: 'report' })),
+                ...pendingStudies.map(s => ({ ...s, type: 'study' }))
+            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             return {
                 success: true,
                 patient: patient,
-                appointments: reports || [], // Use reports as appointments
+                appointments: combinedAppointments,
+                reports: reports || [],
                 studies: studies || []
             };
         } catch (error) {
