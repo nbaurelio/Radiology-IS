@@ -9,11 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <style>
-        #editInfoBtn:hover, #backToPatients:hover {
-            border-color: var(--card-border-hover);
-        }
-    </style>
 </head>
 <body>
 
@@ -88,12 +83,9 @@
     async function loadPatientDetails() {
         const result = await patientDetailService.getPatientDetail(patientId);
         
-        console.log('Patient detail result:', result);
-        
         if (result.success) {
             currentPatient = result.patient;
             displayPatientInfo(result.patient);
-            console.log('Appointments with reports:', result.appointments);
             displayAppointments(result.appointments);
             displayStudies(result.studies);
         } else {
@@ -104,7 +96,6 @@
 
     function displayPatientInfo(patient) {
         const content = document.getElementById('patientDetailContent');
-        const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.name;
         
         if (isEditMode) {
             content.innerHTML = `
@@ -174,6 +165,8 @@
             
             document.getElementById('editPatientForm').addEventListener('submit', savePatientInfo);
         } else {
+            const fullName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || patient.name;
+            
             content.innerHTML = `
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr style="border-bottom: 1px solid var(--line);">
@@ -224,6 +217,23 @@
         }
     }
 
+    function getStatusBadgeClass(status) {
+        if (status === 'scheduled' || status === 'pending') return 'badge-pending';
+        if (status === 'completed') return 'badge-done';
+        return 'badge-reading';
+    }
+
+    function formatDateTime(dateValue) {
+        if (!dateValue) return 'N/A';
+        const date = new Date(dateValue);
+        const datePart = date.toLocaleDateString('en-CA');
+        let hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        return `${datePart} ${hours}:${minutes} ${ampm}`;
+    }
+
     function displayAppointments(appointments) {
         const content = document.getElementById('appointmentsContent');
         
@@ -233,25 +243,9 @@
         }
 
         const appointmentsList = appointments.map(apt => {
-            // Format timestamp - use study_date or schedule from reports table
-            let dateStr = 'N/A';
-            const dateToUse = apt.study_date || apt.schedule;
-            if (dateToUse) {
-                const date = new Date(dateToUse);
-                const datePart = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
-                let hours = date.getHours();
-                const minutes = date.getMinutes().toString().padStart(2, '0');
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                hours = hours % 12 || 12; // Convert to 12-hour format
-                dateStr = `${datePart} ${hours}:${minutes} ${ampm}`;
-            }
-            
-            // Use status from reports table
+            const dateStr = formatDateTime(apt.study_date || apt.schedule);
             const status = apt.status || 'pending';
-            const statusClass = status === 'scheduled' || status === 'pending' ? 'badge-pending' : 
-                               status === 'completed' ? 'badge-done' : 'badge-reading';
-            
-            // Get study_id from reports table
+            const statusClass = getStatusBadgeClass(status);
             const studyId = apt.study_id || 'N/A';
             
             return `
@@ -282,8 +276,7 @@
 
         const studiesList = studies.map(study => {
             const date = study.study_date ? new Date(study.study_date).toLocaleDateString() : 'N/A';
-            const statusClass = study.status === 'pending' ? 'badge-pending' : 
-                               study.status === 'reading' ? 'badge-reading' : 'badge-done';
+            const statusClass = getStatusBadgeClass(study.status || 'pending');
             
             return `
                 <div style="padding: 16px; border-bottom: 1px solid var(--line);">
@@ -301,20 +294,26 @@
         content.innerHTML = studiesList;
     }
 
+    function toggleEditMode(editing) {
+        const btn = document.getElementById('editInfoBtn');
+        btn.disabled = editing;
+        btn.innerHTML = editing ? 
+            'Editing...' : 
+            '<span class="material-icons" style="font-size: 21px; color: #d8d8d8;">edit</span> Edit Info';
+    }
+
     // Edit button functionality
     document.getElementById('editInfoBtn').addEventListener('click', () => {
         isEditMode = true;
         displayPatientInfo(currentPatient);
-        document.getElementById('editInfoBtn').textContent = 'Editing...';
-        document.getElementById('editInfoBtn').disabled = true;
+        toggleEditMode(true);
     });
 
     // Cancel edit
     function cancelEdit() {
         isEditMode = false;
         displayPatientInfo(currentPatient);
-        document.getElementById('editInfoBtn').textContent = 'Edit Info';
-        document.getElementById('editInfoBtn').disabled = false;
+        toggleEditMode(false);
     }
 
     // Save patient info
@@ -350,8 +349,7 @@
             currentPatient = data;
             isEditMode = false;
             displayPatientInfo(currentPatient);
-            document.getElementById('editInfoBtn').innerHTML = '<span class="material-icons" style="font-size: 21px; color: #d8d8d8;">edit</span> Edit Info';
-            document.getElementById('editInfoBtn').disabled = false;
+            toggleEditMode(false);
         } catch (error) {
             console.error('Error updating patient:', error);
             alert('Error updating patient information: ' + error.message);

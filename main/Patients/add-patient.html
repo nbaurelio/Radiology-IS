@@ -78,7 +78,7 @@
             position: absolute;
             left: 14px;
             font-size: 21px;
-            color: #d8d8d8;
+            color: #d8d8d8; 
             pointer-events: none;
         }
 
@@ -294,7 +294,7 @@
             <!-- Medical Information -->
             <div class="form-section">
                 <h2 class="form-section-title">Medical Information</h2>
-                <p class="form-section-subtitle">Patient's medical history and notes</p>
+                <p class="form-section-subtitle">Patient's medical history</p>
 
                 <div class="form-row">
                     <div class="form-group full-width">
@@ -302,32 +302,6 @@
                         <div class="input-with-icon">
                             <span class="material-icons input-icon" style="top: 12px;">description</span>
                             <textarea id="medicalHistory" class="form-input" placeholder="Enter relevant medical history, conditions, allergies, etc."></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group full-width">
-                        <label for="notes">Additional Notes</label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon" style="top: 12px;">note</span>
-                            <textarea id="notes" class="form-input" placeholder="Any additional notes or comments"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Appointment Information -->
-            <div class="form-section">
-                <h2 class="form-section-title">Appointment Information</h2>
-                <p class="form-section-subtitle">Schedule the patient's next appointment (optional)</p>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="nextAppointment">Next Appointment Date & Time</label>
-                        <div class="input-with-icon">
-                            <span class="material-icons input-icon">event</span>
-                            <input type="datetime-local" id="nextAppointment" class="form-input" />
                         </div>
                     </div>
                 </div>
@@ -374,21 +348,22 @@
         submitBtn.textContent = 'Creating...';
         submitBtn.disabled = true;
         
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        
         // Gather form data
         const patientData = {
             patient_id: document.getElementById('patientId').value.trim(),
             mrn: document.getElementById('mrn').value.trim() || null,
-            first_name: document.getElementById('firstName').value.trim(),
-            last_name: document.getElementById('lastName').value.trim(),
-            name: `${document.getElementById('firstName').value.trim()} ${document.getElementById('lastName').value.trim()}`,
+            first_name: firstName,
+            last_name: lastName,
+            name: `${firstName} ${lastName}`,
             date_of_birth: document.getElementById('dateOfBirth').value || null,
             sex: document.getElementById('patientSex').value,
             phone: document.getElementById('phoneNumber').value.trim(),
             email: document.getElementById('contactEmail').value.trim() || null,
             address: document.getElementById('address').value.trim() || null,
             medical_history: document.getElementById('medicalHistory').value.trim() || null,
-            notes: document.getElementById('notes').value.trim() || null,
-            next_appointment: document.getElementById('nextAppointment').value || null,
             registration_date: new Date().toISOString(),
             last_visit_date: null
         };
