@@ -48,12 +48,15 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 -- =====================================================
 -- 3. INSERT TEST USERS
 -- =====================================================
-INSERT INTO users (user_id, first_name, last_name, email, user_type_id, is_active) VALUES
-('ADMIN001', 'Admin', 'User', 'admin001@radiology.local', 1, true),
-('RAD001', 'Radiologist', 'One', 'rad001@radiology.local', 2, true),
-('TECH001', 'Tech', 'One', 'tech001@radiology.local', 3, true)
+-- Password for all test users: admin123
+-- SHA-256 hash of 'admin123': 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
+INSERT INTO users (user_id, first_name, last_name, email, password_hash, user_type_id, is_active) VALUES
+('ADMIN001', 'Admin', 'User', 'admin001@radiology.local', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 1, true),
+('RAD001', 'Radiologist', 'One', 'rad001@radiology.local', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 2, true),
+('TECH001', 'Tech', 'One', 'tech001@radiology.local', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 3, true)
 ON CONFLICT (user_id) DO UPDATE SET
     email = EXCLUDED.email,
+    password_hash = EXCLUDED.password_hash,
     user_type_id = EXCLUDED.user_type_id;
 
 -- =====================================================

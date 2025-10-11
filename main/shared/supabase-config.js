@@ -5,73 +5,142 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Initialize Supabase client (using CDN)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Helper function to hash passwords (simple version - use bcrypt in production)
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-}
-
-// Authentication functions
+// Authentication functions using Supabase Auth
 const authService = {
-    // Login user
-    async login(userId, password) {
+    // Login user with Supabase Auth
+    async login(emailOrUserId, password) {
         try {
-            const hashedPassword = await hashPassword(password);
+            // Convert user_id to email if needed (e.g., ADMIN001 -> admin001@radiology.local)
+            let email = emailOrUserId;
+            if (!emailOrUserId.includes('@')) {
+                // It's a user_id, convert to email format
+                email = `${emailOrUserId.toLowerCase()}@radiology.local`;
+            }
             
-            const { data, error } = await supabase
+            console.log('Attempting login with email:', email);
+            
+            // Sign in with Supabase Auth
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+            
+            if (authError) {
+                console.error('Supabase auth error:', authError);
+                throw authError;
+            }
+            
+            console.log('Supabase auth successful:', authData);
+            
+            // Get user_id from metadata
+            const userId = authData.user.user_metadata?.user_id;
+            
+            if (!userId) {
+                throw new Error('User metadata missing user_id. Please contact administrator.');
+            }
+            
+            console.log('User ID from metadata:', userId);
+            
+            // Look up user details from your users table
+            const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select(`
                     *,
                     user_types(type_name)
                 `)
                 .eq('user_id', userId)
-                .eq('password_hash', hashedPassword)
                 .eq('is_active', true)
                 .single();
-
-            if (error) throw error;
             
-            if (data) {
-                // Store user session in localStorage
-                const session = {
-                    id: data.id,
-                    userId: data.user_id,
-                    firstName: data.first_name,
-                    lastName: data.last_name,
-                    email: data.email,
-                    userType: data.user_types.type_name,
-                    loginTime: new Date().toISOString()
-                };
-                localStorage.setItem('userSession', JSON.stringify(session));
-                return { success: true, user: session };
-            } else {
-                return { success: false, message: 'Invalid credentials' };
+            if (userError) {
+                console.error('User lookup error:', userError);
+                throw userError;
             }
+            
+            if (!userData) {
+                throw new Error('User account not found or inactive');
+            }
+            
+            console.log('User data retrieved:', userData);
+            
+            // Store user session in localStorage (for easy access)
+            const session = {
+                id: userData.id,
+                userId: userData.user_id,
+                firstName: userData.first_name,
+                lastName: userData.last_name,
+                email: userData.email,
+                userType: userData.user_types.type_name,
+                authUserId: authData.user.id, // Supabase auth user ID
+                loginTime: new Date().toISOString()
+            };
+            
+            localStorage.setItem('userSession', JSON.stringify(session));
+            
+            console.log('Login successful! Session stored.');
+            
+            return { success: true, user: session };
+            
         } catch (error) {
             console.error('Login error:', error);
-            return { success: false, message: error.message };
+            return { 
+                success: false, 
+                message: error.message || 'Invalid credentials. Please try again.' 
+            };
         }
     },
 
-    // Logout user
-    logout() {
-        localStorage.removeItem('userSession');
-        window.location.href = '../Login/login.html';
+    // Logout user with Supabase Auth
+    async logout() {
+        try {
+            await supabase.auth.signOut();
+            localStorage.removeItem('userSession');
+            window.location.href = '../Login/login.html';
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Force logout even if Supabase signOut fails
+            localStorage.removeItem('userSession');
+            window.location.href = '../Login/login.html';
+        }
     },
 
-    // Get current user session
+    // Get current user session from localStorage
     getCurrentUser() {
         const session = localStorage.getItem('userSession');
         return session ? JSON.parse(session) : null;
     },
 
-    // Check if user is logged in
-    isAuthenticated() {
-        return localStorage.getItem('userSession') !== null;
+    // Check if user is authenticated (checks both localStorage and Supabase session)
+    async isAuthenticated() {
+        const localSession = localStorage.getItem('userSession');
+        if (!localSession) return false;
+        
+        // Verify with Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+            // Session expired, clear localStorage
+            localStorage.removeItem('userSession');
+            return false;
+        }
+        
+        return true;
+    },
+
+    // Get Supabase session
+    async getSupabaseSession() {
+        const { data: { session } } = await supabase.auth.getSession();
+        return session;
+    },
+
+    // Refresh session
+    async refreshSession() {
+        const { data: { session }, error } = await supabase.auth.refreshSession();
+        if (error) {
+            console.error('Session refresh error:', error);
+            return null;
+        }
+        return session;
     },
 
     // Check user type
@@ -380,6 +449,110 @@ const studyService = {
             console.error('Get dashboard stats error:', error);
             return { success: false, message: error.message };
         }
+    },
+
+    // Generate next Study ID for DICOM uploads (STU-0001, STU-0002, etc.)
+    async generateStudyId() {
+        try {
+            // Get the highest study_id from studies table
+            const { data, error } = await supabase
+                .from('studies')
+                .select('study_id')
+                .not('study_id', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(100); // Get last 100 to find the highest
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                return 'STU-0001'; // First ID
+            }
+
+            // Find the highest study ID
+            let highestId = 'STU-0000';
+            for (const record of data) {
+                if (record.study_id && record.study_id.startsWith('STU-')) {
+                    if (this.compareStudyIds(record.study_id, highestId) > 0) {
+                        highestId = record.study_id;
+                    }
+                }
+            }
+
+            return this.incrementStudyId(highestId);
+        } catch (error) {
+            console.error('Generate study ID error:', error);
+            return 'STU-0001'; // Fallback to first ID
+        }
+    },
+
+    // Compare two study IDs (returns 1 if a > b, -1 if a < b, 0 if equal)
+    compareStudyIds(a, b) {
+        const parseId = (id) => {
+            const match = id.match(/^STU-([A-Z]*)(\d+)$/);
+            if (!match) return { prefix: '', number: 0 };
+            return { prefix: match[1], number: parseInt(match[2]) };
+        };
+
+        const idA = parseId(a);
+        const idB = parseId(b);
+
+        // Compare prefix length first (longer prefix = higher)
+        if (idA.prefix.length !== idB.prefix.length) {
+            return idA.prefix.length - idB.prefix.length;
+        }
+
+        // Compare prefix alphabetically
+        if (idA.prefix !== idB.prefix) {
+            return idA.prefix.localeCompare(idB.prefix);
+        }
+
+        // Compare numbers
+        return idA.number - idB.number;
+    },
+
+    // Increment Study ID
+    incrementStudyId(lastId) {
+        const match = lastId.match(/^STU-([A-Z]*)(\d+)$/);
+        if (!match) return 'STU-0001';
+
+        let prefix = match[1];
+        let number = parseInt(match[2]);
+
+        number++;
+
+        // If number exceeds 9999, increment prefix
+        if (number > 9999) {
+            number = 0;
+            prefix = this.incrementPrefix(prefix);
+        }
+
+        return `STU-${prefix}${number.toString().padStart(4, '0')}`;
+    },
+
+    // Increment prefix ('' → 'A', 'A' → 'B', 'Z' → 'AA', 'AZ' → 'BA', etc.)
+    incrementPrefix(prefix) {
+        if (!prefix) return 'A';
+        
+        // Convert prefix to array of characters
+        const chars = prefix.split('');
+        
+        // Start from the rightmost character
+        for (let i = chars.length - 1; i >= 0; i--) {
+            if (chars[i] === 'Z') {
+                chars[i] = 'A';
+                // If this was the leftmost character, add a new 'A' at the start
+                if (i === 0) {
+                    return 'A' + chars.join('');
+                }
+                // Otherwise continue to increment the next character
+            } else {
+                // Increment this character and we're done
+                chars[i] = String.fromCharCode(chars[i].charCodeAt(0) + 1);
+                return chars.join('');
+            }
+        }
+        
+        return chars.join('');
     }
 };
 

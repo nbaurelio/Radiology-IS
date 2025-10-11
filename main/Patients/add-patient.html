@@ -322,11 +322,15 @@
 <script src="../shared/header.js"></script>
 
 <script>
-    // Check if user is logged in
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-        window.location.href = '../Login/login.html';
-    }
+    // Check authentication on page load
+    (async () => {
+        const isAuth = await authService.isAuthenticated();
+        if (!isAuth) {
+            window.location.href = '../Login/login.html';
+            return;
+        }
+        
+        const currentUser = authService.getCurrentUser();
 
     // Initialize header
     headerComponent.initialize('patients');
@@ -403,6 +407,7 @@
             submitBtn.disabled = false;
         }
     });
+    })(); // Close async function
 </script>
 
 <script src="../shared/theme-toggle.js"></script>

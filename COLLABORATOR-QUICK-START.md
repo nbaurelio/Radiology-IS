@@ -13,41 +13,7 @@ Edit `main/shared/supabase-config.js`:
 
 ---
 
-### ✅ Step 2: Create Auth Users (5 min)
-
-Go to **Supabase Dashboard → Authentication → Users → Add User**
-
-Create 3 users with these details:
-
-#### User 1: Admin
-```
-Email: admin001@radiology.local
-Password: admin123
-Auto Confirm User: ✅ YES
-User Metadata: {"user_id": "ADMIN001"}
-```
-
-#### User 2: Radiologist
-```
-Email: rad001@radiology.local
-Password: admin123
-Auto Confirm User: ✅ YES
-User Metadata: {"user_id": "RAD001"}
-```
-
-#### User 3: Rad Tech
-```
-Email: tech001@radiology.local
-Password: admin123
-Auto Confirm User: ✅ YES
-User Metadata: {"user_id": "TECH001"}
-```
-
-**Important:** Don't forget to add the User Metadata JSON for each user!
-
----
-
-### ✅ Step 3: Run Database Setup (2 min)
+### ✅ Step 2: Run Database Setup (2 min)
 
 1. Go to **Supabase Dashboard → SQL Editor**
 2. Open the file: `main/database/complete-database-setup.sql`
@@ -59,7 +25,11 @@ User Metadata: {"user_id": "TECH001"}
 
 ---
 
-### ✅ Step 4: Test Login (1 min)
+**Note:** You may see a warning about "destructive operations" - this is safe! The script only drops/recreates security policies, not data.
+
+---
+
+### ✅ Step 3: Test Login (1 min)
 
 1. Open the application in your browser
 2. Go to Login page
@@ -81,10 +51,10 @@ Look for error messages that might give clues.
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| "Invalid credentials" | Auth user doesn't exist | Re-do Step 2 |
-| "User account not found" | Database tables missing | Re-run Step 3 |
-| "RLS policy violation" | Not authenticated | Make sure Step 2 is complete |
-| "relation does not exist" | Tables not created | Re-run Step 3 |
+| "Invalid credentials" | Password hash mismatch | Re-run Step 2 SQL script |
+| "User account not found" | Database tables missing | Re-run Step 2 SQL script |
+| "RLS policy violation" | Policies not set up | Re-run Step 2 SQL script |
+| "relation does not exist" | Tables not created | Re-run Step 2 SQL script |
 
 ---
 
@@ -133,7 +103,7 @@ If you're still stuck after following these steps:
 
 ---
 
-**Total Time:** ~10 minutes  
-**Difficulty:** Easy  
+**Total Time:** ~5 minutes  
+**Difficulty:** Very Easy  
 
 You're all set! Happy coding! 🎉

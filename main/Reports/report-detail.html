@@ -111,10 +111,15 @@
 <script src="../shared/header.js"></script>
 
 <script>
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-        window.location.href = '../Login/login.html';
-    }
+    // Check authentication on page load
+    (async () => {
+        const isAuth = await authService.isAuthenticated();
+        if (!isAuth) {
+            window.location.href = '../Login/login.html';
+            return;
+        }
+        
+        const currentUser = authService.getCurrentUser();
 
     // Initialize header with smooth animations
     headerComponent.initialize('reports');
@@ -421,6 +426,7 @@
     }
 
     loadReportDetails();
+    })(); // Close async function
 </script>
 
 <script src="../shared/theme-toggle.js"></script>

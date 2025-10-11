@@ -61,10 +61,15 @@
 <script src="../shared/header.js"></script>
 
 <script>
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-        window.location.href = '../Login/login.html';
-    }
+    // Check authentication on page load
+    (async () => {
+        const isAuth = await authService.isAuthenticated();
+        if (!isAuth) {
+            window.location.href = '../Login/login.html';
+            return;
+        }
+        
+        const currentUser = authService.getCurrentUser();
 
     // Initialize header with smooth animations
     headerComponent.initialize('patient-detail');
@@ -250,7 +255,7 @@
             
             // Determine if it's a study or report
             const isStudy = apt.type === 'study';
-            const typeLabel = isStudy ? '📁 DICOM Study' : '📄 Report';
+            const typeLabel = isStudy ? 'DICOM Study' : 'Report';
             const title = isStudy ? 'DICOM Study Upload' : (apt.exam_type || 'Radiology Report');
             const description = isStudy ? 
                 (apt.clinical_history || 'No clinical history provided') : 
@@ -373,6 +378,7 @@
     }
 
     loadPatientDetails();
+    })(); // Close async function
 </script>
 
 <script src="../shared/theme-toggle.js"></script>

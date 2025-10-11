@@ -184,16 +184,21 @@ select.btn {
 <script src="../shared/header.js"></script>
 
 <script>
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-        window.location.href = '../Login/login.html';
-    }
+    // Check authentication on page load
+    (async () => {
+        const isAuth = await authService.isAuthenticated();
+        if (!isAuth) {
+            window.location.href = '../Login/login.html';
+            return;
+        }
+        
+        const currentUser = authService.getCurrentUser();
 
-    // Initialize header with smooth animations
-    headerComponent.initialize('dashboard');
+        // Initialize header with smooth animations
+        headerComponent.initialize('dashboard');
 
-    document.getElementById('userName').textContent = currentUser.firstName;
-    document.getElementById('userRole').textContent = currentUser.userType;
+        document.getElementById('userName').textContent = currentUser.firstName;
+        document.getElementById('userRole').textContent = currentUser.userType;
 
     // Filters
     let currentStatusFilter = '';
@@ -323,6 +328,7 @@ select.btn {
     }
 
     loadDashboard();
+    })(); // Close async function
 </script>
 
 <script src="../shared/theme-toggle.js"></script>

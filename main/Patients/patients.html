@@ -64,14 +64,18 @@
 <script src="../shared/header.js"></script>
 
 <script>
-    // Check if user is logged in
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-        window.location.href = '../Login/login.html';
-    }
+    // Check authentication on page load
+    (async () => {
+        const isAuth = await authService.isAuthenticated();
+        if (!isAuth) {
+            window.location.href = '../Login/login.html';
+            return;
+        }
+        
+        const currentUser = authService.getCurrentUser();
 
-    // Initialize header with smooth animations
-    headerComponent.initialize('patients');
+        // Initialize header with smooth animations
+        headerComponent.initialize('patients');
 
     // Add patient button - navigate to add patient page
     const addBtn = document.getElementById('addPatientBtn');
@@ -186,6 +190,7 @@
 
     // Load patients on page load
     loadPatients();
+    })(); // Close async function
 </script>
 
 <script src="../shared/theme-toggle.js"></script>

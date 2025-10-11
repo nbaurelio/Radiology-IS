@@ -149,14 +149,18 @@
 <script src="../shared/header.js"></script>
 
 <script>
-    // Check if user is logged in
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-        window.location.href = '../Login/login.html';
-    }
+    // Check authentication on page load
+    (async () => {
+        const isAuth = await authService.isAuthenticated();
+        if (!isAuth) {
+            window.location.href = '../Login/login.html';
+            return;
+        }
+        
+        const currentUser = authService.getCurrentUser();
 
-    // Initialize header with smooth animations
-    headerComponent.initialize('upload');
+        // Initialize header with smooth animations
+        headerComponent.initialize('upload');
 
     // Modal functionality
     const modal = document.getElementById('uploadModal');
@@ -446,8 +450,8 @@
             uploadStatus.textContent = 'Generating Study ID...';
             await simulateProgress(progressBar, progressPercent, 20, 40, 300);
             
-            // Generate unique Study ID
-            const studyId = await reportService.generateStudyId();
+            // Generate unique Study ID from studies table
+            const studyId = await studyService.generateStudyId();
             
             uploadStatus.textContent = 'Extracting DICOM metadata...';
             await simulateProgress(progressBar, progressPercent, 40, 60, 500);
@@ -532,6 +536,7 @@
 
     // Load studies on page load
     loadStudies();
+    })(); // Close async function
 </script>
 
 <script src="../shared/theme-toggle.js"></script>
