@@ -56,12 +56,12 @@ body{
 }
 
 .topnav .row{
-  max-width:1200px; 
+  max-width:1400px; 
   margin:auto; 
   display:flex; 
   align-items:center; 
   gap:16px;
-  padding:12px clamp(12px, 2vw, 24px);
+  padding:16px clamp(12px, 2vw, 24px);
 }
 
 .brand{
@@ -69,6 +69,7 @@ body{
   align-items:center; 
   gap:10px; 
   font-weight:700;
+  font-size: 23px;
 }
 
 .brand .logo{
@@ -86,6 +87,7 @@ body{
   color:var(--muted); 
   font-weight:600; 
   letter-spacing:.2px;
+  font-size: 18px;
 }
 
 .spacer{flex:1}
@@ -155,7 +157,7 @@ body{
 
 /* Tabbar */
 .tabs{
-  max-width:1200px; 
+  max-width:1400px; 
   margin:0 auto; 
   padding: 0 clamp(12px, 2vw, 24px);
   display:flex; 
@@ -175,6 +177,7 @@ body{
   display:inline-flex; 
   padding:12px 2px; 
   font-weight:600; 
+  font-size: 18px;
   color:var(--muted);
   text-decoration:none; 
   white-space:nowrap; 
@@ -207,7 +210,7 @@ body{
 
 /* Page Container */
 .container{
-  max-width:1200px; 
+  max-width:1400px; 
   margin:20px auto 48px; 
   padding: 0 clamp(12px, 2vw, 24px);
   opacity: 0;
