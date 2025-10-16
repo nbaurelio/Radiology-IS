@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { studyService } from '../services/studyService'
 
 const StudyDetail = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [study, setStudy] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -54,11 +55,26 @@ const StudyDetail = () => {
     `${study.patients.first_name} ${study.patients.last_name}` : 
     'Unknown Patient'
 
+  const getPriorityBadgeClass = (priority) => {
+    return priority === 'stat' ? 'badge-priority-stat' :
+           priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine'
+  }
+
+  const getStatusBadgeClass = (status) => {
+    return status === 'pending' ? 'badge-pending' :
+           status === 'reading' ? 'badge-reading' : 'badge-done'
+  }
+
+  const priorityText = study.priority === 'stat' ? 'STAT' : 
+                      (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1)
+  const statusText = (study.status || 'pending').charAt(0).toUpperCase() + (study.status || 'pending').slice(1)
+  const uploadDate = study.created_at ? new Date(study.created_at).toLocaleString() : 'N/A'
+
   return (
     <div className="container">
-      <div style={{marginBottom: '20px'}}>
+      <div style={{marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <Link 
-          to="/dashboard" 
+          to="/reports" 
           style={{
             display: 'flex', 
             alignItems: 'center', 
@@ -72,12 +88,33 @@ const StudyDetail = () => {
             transition: 'border-color 0.2s ease', 
             fontFamily: 'inherit', 
             fontSize: '14px', 
-            textDecoration: 'none',
-            width: 'fit-content'
+            textDecoration: 'none'
           }}
         >
-          ← Back to Studies
+          ← Back to Reports
         </Link>
+        <button 
+          onClick={() => navigate(`/reports/add?study_id=${id}`)}
+          style={{
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            padding: '12px 24px', 
+            border: 'none', 
+            borderRadius: '12px', 
+            background: 'linear-gradient(135deg, var(--brand), #7a5af8)', 
+            color: 'white', 
+            cursor: 'pointer', 
+            fontFamily: 'inherit', 
+            fontSize: '15px', 
+            fontWeight: 700, 
+            boxShadow: '0 6px 16px rgba(109,93,252,.25)', 
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}
+        >
+          <span className="material-icons" style={{fontSize: '21px'}}>add_circle</span>
+          Create Report
+        </button>
       </div>
 
       <section className="grid">
@@ -85,63 +122,82 @@ const StudyDetail = () => {
           <div className="hd">Study Information</div>
           <div className="bd">
             <div style={{padding: '20px'}}>
-              <h1 style={{fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: 'var(--ink)'}}>
-                Study #{study.study_id}
-              </h1>
-              <p style={{color: 'var(--muted)', marginBottom: '24px'}}>
-                Patient: {patientName}
-              </p>
-              
-              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px'}}>
-                <div>
-                  <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '12px', color: 'var(--ink)'}}>
-                    Study Details
-                  </h3>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                    <div><strong>Study ID:</strong> {study.study_id}</div>
-                    <div><strong>Upload Date:</strong> {new Date(study.created_at).toLocaleDateString()}</div>
-                    <div>
-                      <strong>Priority:</strong> 
-                      <span className={`badge ${
-                        study.priority === 'stat' ? 'badge-priority-stat' :
-                        study.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine'
-                      }`} style={{marginLeft: '8px'}}>
-                        {(study.priority || 'routine').toUpperCase()}
+              <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                <tbody>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600, width: '30%'}}>Study ID</td>
+                    <td style={{padding: '12px'}}>{study.study_id || 'N/A'}</td>
+                  </tr>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600}}>Upload Date</td>
+                    <td style={{padding: '12px'}}>{uploadDate}</td>
+                  </tr>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600}}>Priority</td>
+                    <td style={{padding: '12px'}}>
+                      <span className={`badge ${getPriorityBadgeClass(study.priority)}`}>
+                        {priorityText}
                       </span>
-                    </div>
-                    <div>
-                      <strong>Status:</strong> 
-                      <span className={`badge ${
-                        study.status === 'pending' ? 'badge-pending' :
-                        study.status === 'reading' ? 'badge-reading' : 'badge-done'
-                      }`} style={{marginLeft: '8px'}}>
-                        {(study.status || 'pending').toUpperCase()}
+                    </td>
+                  </tr>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600}}>Status</td>
+                    <td style={{padding: '12px'}}>
+                      <span className={`badge ${getStatusBadgeClass(study.status)}`}>
+                        {statusText}
                       </span>
-                    </div>
-                  </div>
-                </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{padding: '12px', fontWeight: 600}}>Clinical History</td>
+                    <td style={{padding: '12px'}}>{study.clinical_history || 'None provided'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
 
-                <div>
-                  <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '12px', color: 'var(--ink)'}}>
-                    Clinical Information
-                  </h3>
-                  <div>
-                    <strong>Clinical History:</strong>
-                    <p style={{marginTop: '4px', color: 'var(--muted)'}}>
-                      {study.clinical_history || 'None provided'}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '12px', color: 'var(--ink)'}}>
-                    Files
-                  </h3>
-                  <div>
-                    <strong>DICOM Files:</strong> {study.dicom_files?.length || 0}
-                  </div>
-                </div>
-              </div>
+        <article className="card" style={{gridColumn: '1 / -1'}}>
+          <div className="hd">Patient Information</div>
+          <div className="bd">
+            <div style={{padding: '20px'}}>
+              {study.patients ? (
+                <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                  <tbody>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600, width: '30%'}}>Patient ID</td>
+                      <td style={{padding: '12px'}}>{study.patients.patient_id || 'N/A'}</td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600}}>Full Name</td>
+                      <td style={{padding: '12px'}}>{patientName}</td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600}}>Date of Birth</td>
+                      <td style={{padding: '12px'}}>
+                        {study.patients.date_of_birth ? new Date(study.patients.date_of_birth).toLocaleDateString() : 'N/A'}
+                      </td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600}}>Sex</td>
+                      <td style={{padding: '12px'}}>
+                        {study.patients.sex ? study.patients.sex.charAt(0).toUpperCase() + study.patients.sex.slice(1) : 'N/A'}
+                      </td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600}}>Phone</td>
+                      <td style={{padding: '12px'}}>{study.patients.phone || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td style={{padding: '12px', fontWeight: 600}}>Email</td>
+                      <td style={{padding: '12px'}}>{study.patients.email || 'N/A'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <p style={{color: 'var(--muted)'}}>Patient information not available</p>
+              )}
             </div>
           </div>
         </article>
@@ -151,48 +207,29 @@ const StudyDetail = () => {
           <div className="bd">
             <div style={{padding: '20px'}}>
               {study.dicom_files && study.dicom_files.length > 0 ? (
-                <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                  {study.dicom_files.map((file, index) => (
-                    <div key={index} style={{
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      padding: '12px', 
-                      border: '1px solid var(--line)', 
-                      borderRadius: '8px',
-                      background: 'var(--bg)'
-                    }}>
-                      <div>
-                        <div style={{fontWeight: '600', fontSize: '14px'}}>
-                          {file.file_name || `DICOM File ${index + 1}`}
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  {study.dicom_files.map((file, index) => {
+                    const sizeInMB = file.size ? (file.size / (1024 * 1024)).toFixed(2) : '0.00'
+                    const fileIcon = file.name && file.name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
+                    
+                    return (
+                      <div key={index} className="file-item">
+                        <div className="file-item-info">
+                          <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
+                          <div style={{flex: 1, minWidth: 0}}>
+                            <div className="file-item-name">{file.name || `DICOM File ${index + 1}`}</div>
+                            <div className="file-item-size">{sizeInMB} MB</div>
+                          </div>
                         </div>
-                        <div style={{fontSize: '12px', color: 'var(--muted)'}}>
-                          {file.file_size ? `${(file.file_size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
+                        <div className="file-item-status">
+                          <span className="badge badge-done">Uploaded</span>
                         </div>
                       </div>
-                      <div style={{display: 'flex', gap: '8px'}}>
-                        <button 
-                          className="btn" 
-                          onClick={() => alert('DICOM viewer coming soon!')}
-                          style={{padding: '6px 12px', fontSize: '12px'}}
-                        >
-                          👁️ View
-                        </button>
-                        <button 
-                          className="btn" 
-                          onClick={() => alert('Download functionality coming soon!')}
-                          style={{padding: '6px 12px', fontSize: '12px'}}
-                        >
-                          📥 Download
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
-                <p style={{textAlign: 'center', color: 'var(--muted)', padding: '40px 20px'}}>
-                  No DICOM files found for this study.
-                </p>
+                <p style={{color: 'var(--muted)'}}>No DICOM files found</p>
               )}
             </div>
           </div>

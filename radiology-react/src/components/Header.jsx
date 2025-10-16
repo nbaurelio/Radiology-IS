@@ -111,38 +111,36 @@ const Header = () => {
   ]
 
   return (
-    <>
-      <nav className="topnav">
-        <div className="row">
-          <div className="brand">
-            <span className="logo"></span>
-            <div>
-              Radiology IS
-              <small>{getPageTitle(location.pathname)}</small>
-            </div>
-          </div>
-          
-          <div className="spacer"></div>
-          
-          <div className="actions">
-            <button 
-              onClick={toggleTheme}
-              className="theme-toggle"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
-            
-            <button onClick={handleLogout} className="btn">
-              Logout
-            </button>
-            
-            <div className="avatar" title={user?.firstName}></div>
+    <header className="topnav">
+      <div className="row">
+        <div className="brand">
+          <span className="logo"></span>
+          <div>
+            Radiology IS
+            <small>{getPageTitle(location.pathname)}</small>
           </div>
         </div>
-      </nav>
+        
+        <div className="spacer"></div>
+        
+        <div className="actions">
+          <button 
+            onClick={toggleTheme}
+            className="theme-toggle"
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+          
+          <button onClick={handleLogout} className="btn">
+            Logout
+          </button>
+          
+          <div className="avatar" aria-label="Profile"></div>
+        </div>
+      </div>
 
-      <nav className="tabs" ref={tabsRef}>
+      <nav className="tabs" aria-label="Primary" ref={tabsRef}>
         {navItems.map((item) => (
           <Link
             key={item.path}
@@ -154,7 +152,7 @@ const Header = () => {
         ))}
         <div className="tab-indicator" ref={indicatorRef}></div>
       </nav>
-    </>
+    </header>
   )
 }
 

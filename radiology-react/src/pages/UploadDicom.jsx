@@ -182,6 +182,9 @@ const UploadDicom = () => {
                       const statusText = (study.status || 'pending').charAt(0).toUpperCase() + (study.status || 'pending').slice(1)
                       
                       const studyDate = study.created_at ? new Date(study.created_at).toLocaleDateString() : 'N/A'
+                      
+                      // Count DICOM files
+                      const fileCount = study.dicom_files ? study.dicom_files.length : 0
 
                       return (
                         <tr 
@@ -191,7 +194,7 @@ const UploadDicom = () => {
                         >
                           <td data-label="Study ID">{study.study_id || 'N/A'}</td>
                           <td data-label="Patient">{patientName}</td>
-                          <td data-label="Modality">N/A</td>
+                          <td data-label="Modality">DICOM ({fileCount} files)</td>
                           <td data-label="Study Date">{studyDate}</td>
                           <td data-label="Priority">
                             <span className={`badge ${priorityClass}`}>{priorityText}</span>
@@ -218,8 +221,8 @@ const UploadDicom = () => {
 
       {/* Upload DICOM Modal */}
       {showModal && (
-        <div className="modal" style={{display: 'flex'}}>
-          <div className="modal-content" style={{maxWidth: '800px'}}>
+        <div className="modal" style={{display: 'flex', padding: '130px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '800px', margin: 'auto', maxHeight: 'calc(100vh - 170px)', overflowY: 'auto'}}>
             <div className="modal-header">
               <div>
                 <h2>Upload DICOM Study</h2>
@@ -234,7 +237,7 @@ const UploadDicom = () => {
                   <div className="form-group full-width">
                     <label htmlFor="patientSelect">Select Patient <span className="required">*</span></label>
                     <div className="input-with-icon">
-                      <span className="input-icon">👤</span>
+                      <span className="input-icon">person</span>
                       <select 
                         id="patientSelect" 
                         className="form-input" 
@@ -324,7 +327,7 @@ const UploadDicom = () => {
                   <div className="form-group">
                     <label htmlFor="clinicalHistory">Clinical History</label>
                     <div className="input-with-icon">
-                      <span className="input-icon">📝</span>
+                      <span className="input-icon">notes</span>
                       <input 
                         type="text" 
                         id="clinicalHistory" 
@@ -338,7 +341,7 @@ const UploadDicom = () => {
                   <div className="form-group">
                     <label htmlFor="examPriority">Exam Priority <span className="required">*</span></label>
                     <div className="input-with-icon">
-                      <span className="input-icon">⚠️</span>
+                      <span className="input-icon">priority_high</span>
                       <select 
                         id="examPriority" 
                         className="form-input" 

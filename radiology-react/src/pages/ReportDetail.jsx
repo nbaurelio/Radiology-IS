@@ -24,6 +24,23 @@ const ReportDetail = () => {
     }
   }
 
+  const patientName = report && report.patients ? 
+    `${report.patients.first_name} ${report.patients.last_name}` : 
+    'Unknown Patient'
+
+  const getPriorityBadgeClass = (priority) => {
+    return priority === 'stat' ? 'badge-priority-stat' :
+           priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine'
+  }
+
+  const getStatusBadgeClass = (status) => {
+    return status === 'pending' ? 'badge-pending' :
+           status === 'reading' ? 'badge-reading' : 'badge-done'
+  }
+
+  const priorityText = report && report.priority === 'stat' ? 'STAT' : 
+                      (report && report.priority || 'routine').charAt(0).toUpperCase() + (report && report.priority || 'routine').slice(1)
+
   const handleEdit = () => {
     alert('Edit functionality coming soon!')
   }
@@ -104,51 +121,133 @@ const ReportDetail = () => {
           <div className="hd">Report Information</div>
           <div className="bd">
             <div style={{padding: '20px'}}>
-              <h1 style={{fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: 'var(--ink)'}}>
-                Report #{report.study_id || id}
-              </h1>
-              <p style={{color: 'var(--muted)', marginBottom: '24px'}}>
-                Patient: {report.name || 'Unknown'}
-              </p>
-              
-              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px'}}>
-                <div>
-                  <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '12px', color: 'var(--ink)'}}>
-                    Study Information
-                  </h3>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                    <div><strong>Study ID:</strong> {report.study_id || 'N/A'}</div>
-                    <div><strong>Exam Type:</strong> {report.exam_type || 'N/A'}</div>
-                    <div><strong>Study Date:</strong> {report.study_date ? new Date(report.study_date).toLocaleDateString() : 'N/A'}</div>
-                    <div>
-                      <strong>Priority:</strong> 
-                      <span className={`badge ${
-                        report.priority === 'stat' ? 'badge-priority-stat' :
-                        report.priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine'
-                      }`} style={{marginLeft: '8px'}}>
-                        {(report.priority || 'routine').toUpperCase()}
-                      </span>
-                    </div>
+              <div className="info-grid">
+                <div className="info-card">
+                  <div className="info-label">Study ID</div>
+                  <div className="info-value">{report.study_id || 'N/A'}</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Exam Type</div>
+                  <div className="info-value">{report.exam_type || 'N/A'}</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Modality</div>
+                  <div className="info-value">{report.modality || 'N/A'}</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Priority</div>
+                  <div className="info-value">
+                    <span className={`badge ${getPriorityBadgeClass(report.priority)}`}>
+                      {priorityText}
+                    </span>
                   </div>
                 </div>
-
-                <div>
-                  <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '12px', color: 'var(--ink)'}}>
-                    Report Status
-                  </h3>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                    <div>
-                      <strong>Status:</strong> 
-                      <span className={`badge ${
-                        report.status === 'pending' ? 'badge-pending' :
-                        report.status === 'reading' ? 'badge-reading' : 'badge-done'
-                      }`} style={{marginLeft: '8px'}}>
-                        {(report.status || 'pending').toUpperCase()}
-                      </span>
-                    </div>
-                    <div><strong>Created:</strong> {report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}</div>
-                    <div><strong>Radiologist:</strong> {report.assigned_radiologist || 'Unassigned'}</div>
+                <div className="info-card">
+                  <div className="info-label">Status</div>
+                  <div className="info-value">
+                    <span className={`badge ${getStatusBadgeClass(report.status)}`}>
+                      {report.status ? report.status.toUpperCase() : 'N/A'}
+                    </span>
                   </div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Assigned Radiologist</div>
+                  <div className="info-value">{report.assigned_radiologist || 'Unassigned'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        {/* Patient Information */}
+        <article className="card" style={{gridColumn: '1 / -1'}}>
+          <div className="hd">Patient Information</div>
+          <div className="bd">
+            <div style={{padding: '20px'}}>
+              {report.patients ? (
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px'}}>
+                  <div style={{flex: 1}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px'}}>
+                      <div>
+                        <div className="info-label">Patient Name</div>
+                        <div style={{fontSize: '20px', color: 'var(--ink)', fontWeight: 600}}>{patientName}</div>
+                      </div>
+                      <div style={{height: '40px', width: '1px', background: 'var(--line)'}}></div>
+                      <div>
+                        <div className="info-label">Patient ID</div>
+                        <div style={{fontSize: '20px', color: 'var(--ink)', fontWeight: 600}}>
+                          {report.patients.patient_id || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <Link
+                    to={`/patients/${report.patients.id}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 20px',
+                      border: '1px solid var(--card-border)',
+                      borderRadius: '8px',
+                      background: 'var(--panel)',
+                      color: 'var(--ink)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      fontFamily: 'inherit',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <span className="material-icons" style={{fontSize: '20px'}}>person</span>
+                    View Patient Details
+                  </Link>
+                </div>
+              ) : (
+                <p style={{color: 'var(--muted)'}}>No patient information available</p>
+              )}
+            </div>
+          </div>
+        </article>
+
+        {/* Study Details */}
+        <article className="card" style={{gridColumn: '1 / -1'}}>
+          <div className="hd">Study Details</div>
+          <div className="bd">
+            <div style={{padding: '20px'}}>
+              <div className="info-grid">
+                <div className="info-card">
+                  <div className="info-label">Study Date</div>
+                  <div className="info-value">
+                    {report.study_date ? new Date(report.study_date).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Scheduled Date</div>
+                  <div className="info-value">
+                    {report.schedule ? new Date(report.schedule).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Report Status</div>
+                  <div className="info-value">{report.report_status || 'Draft'}</div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Created At</div>
+                  <div className="info-value">
+                    {report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Last Updated</div>
+                  <div className="info-value">
+                    {report.updated_at ? new Date(report.updated_at).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+                <div className="info-card">
+                  <div className="info-label">Notification Sent</div>
+                  <div className="info-value">{report.notification_sent ? 'Yes' : 'No'}</div>
                 </div>
               </div>
             </div>

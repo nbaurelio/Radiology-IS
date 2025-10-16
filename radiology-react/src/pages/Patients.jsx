@@ -95,9 +95,13 @@ const Patients = () => {
             placeholder="Search patients by name, ID, or exam type..." 
           />
         </div>
-        <Link to="/patients/add" className="add-patient-btn" aria-label="Add Patient">
+        <button 
+          className="add-patient-btn" 
+          onClick={() => window.location.href = '/patients/add'}
+          aria-label="Add Patient"
+        >
           <span className="plus-icon">+</span>
-        </Link>
+        </button>
       </article>
 
       {/* Patients List */}

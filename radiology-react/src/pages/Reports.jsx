@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { reportService } from '../services/reportService'
 import { studyService } from '../services/studyService'
 
 const Reports = () => {
+  const navigate = useNavigate()
   const [reports, setReports] = useState([])
   const [pendingStudies, setPendingStudies] = useState([])
   const [loading, setLoading] = useState(true)
@@ -132,7 +133,7 @@ const Reports = () => {
                     return (
                       <tr 
                         key={study.id}
-                        onClick={() => window.location.href = `/studies/${study.id}`}
+                        onClick={() => navigate(`/studies/${study.id}`)}
                         style={{cursor: 'pointer'}}
                       >
                         <td data-label="Study ID">{study.study_id || 'N/A'}</td>
@@ -208,7 +209,7 @@ const Reports = () => {
                     return (
                       <tr 
                         key={report.id}
-                        onClick={() => window.location.href = `/reports/${report.id}`}
+                        onClick={() => navigate(`/reports/${report.id}`)}
                         style={{cursor: 'pointer'}}
                       >
                         <td data-label="Study ID">{studyId}</td>

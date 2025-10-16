@@ -263,12 +263,13 @@ const Dashboard = () => {
                           </span>
                         </td>
                         <td data-label="Actions">
-                          <button 
+                          <a 
+                            href="#" 
                             className="btn-grad" 
-                            onClick={() => alert('Study viewer coming soon!')}
+                            onClick={(e) => { e.preventDefault(); alert('Study viewer coming soon!'); }}
                           >
                             View
-                          </button>
+                          </a>
                         </td>
                       </tr>
                     )

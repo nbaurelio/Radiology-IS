@@ -178,5 +178,28 @@ export const patientService = {
       console.error('Get patient detail error:', error)
       return { success: false, message: error.message }
     }
+  },
+
+  async updatePatient(patientId, patientData) {
+    try {
+      const updatedData = {
+        ...patientData,
+        name: `${patientData.first_name} ${patientData.last_name}`,
+        updated_at: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from('patients')
+        .update(updatedData)
+        .eq('id', patientId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { success: true, patient: data }
+    } catch (error) {
+      console.error('Update patient error:', error)
+      return { success: false, message: error.message }
+    }
   }
 }

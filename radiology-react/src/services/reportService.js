@@ -99,6 +99,26 @@ export const reportService = {
     }
   },
 
+  async getReportById(reportId) {
+    try {
+      const { data: report, error } = await supabase
+        .from('reports')
+        .select(`
+          *,
+          patients(*)
+        `)
+        .eq('id', reportId)
+        .single()
+
+      if (error) throw error
+      
+      return { success: true, report: report }
+    } catch (error) {
+      console.error('Get report by ID error:', error)
+      return { success: false, message: error.message, report: null }
+    }
+  },
+
   async getAllPatients() {
     try {
       const { data, error } = await supabase

@@ -5,7 +5,7 @@ const Telehealth = () => {
     <section className="grid">
       {/* Placeholder for future telehealth functionality */}
       <article className="card" style={{gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px'}}>
-        <div style={{fontSize: '64px', marginBottom: '20px'}}>📹</div>
+        <div style={{fontSize: '64px', marginBottom: '20px', color: 'var(--brand)'}}>⚕</div>
         <h2 style={{margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: 'var(--ink)'}}>
           Telehealth Services
         </h2>
