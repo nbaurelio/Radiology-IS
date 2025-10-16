@@ -217,6 +217,40 @@ select.btn {
     document.getElementById('refreshBtn').addEventListener('click', () => {
         loadDashboard();
     });
+    // Study service
+    window.studyService = window.studyService || {};
+
+    if (!studyService.getRecentStudies) {
+    studyService.getRecentStudies = async function getRecentStudies(limit = 50) {
+        try {
+        const { data, error } = await supabase
+            .from('studies')
+            .select(`
+            study_id,
+            patient_uuid,
+            created_at,
+            priority,
+            status,
+            patients:patients!fk_patient (
+                first_name,
+                last_name
+            )
+            `)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('getRecentStudies error:', error);
+            return { success: false, error };
+        }
+
+        return { success: true, studies: data ?? [] };
+        } catch (e) {
+        console.error('Unexpected error in getRecentStudies:', e);
+        return { success: false, error: e };
+        }
+    };
+    }
 
     async function loadDashboard() {
         try {
@@ -246,10 +280,10 @@ select.btn {
 
                 // Apply filters
                 if (currentStatusFilter) {
-                    studies = studies.filter(s => s.status === currentStatusFilter);
+                    studies = studies.filter(s => (s.status || '').toLowerCase() === currentStatusFilter);
                 }
                 if (currentPriorityFilter) {
-                    studies = studies.filter(s => s.priority === currentPriorityFilter);
+                    studies = studies.filter(s => (s.priority || '').toLowerCase() === currentPriorityFilter);
                 }
 
                 if (studies.length > 0) {
@@ -285,47 +319,50 @@ select.btn {
     }
 
     function displayStudies(studies) {
-        const tbody = document.getElementById('studiesTableBody');
-        tbody.innerHTML = studies.map(study => {
-            const patientName = study.patients 
-                ? `${study.patients.first_name || ''} ${study.patients.last_name || ''}`.trim() || 'Unknown'
-                : 'Unknown Patient';
-            
-            const studyDate = study.study_date 
-                ? new Date(study.study_date).toLocaleDateString()
-                : new Date(study.created_at).toLocaleDateString();
+    const tbody = document.getElementById('studiesTableBody');
+    tbody.innerHTML = studies.map(study => {
+        const patientName = study.patients
+        ? `${study.patients.first_name || ''} ${study.patients.last_name || ''}`.trim() || 'Unknown'
+        : 'Unknown Patient';
 
-            const priorityClass = study.priority === 'stat' ? 'badge-pending' : 
-                                 study.priority === 'urgent' ? 'badge-reading' : 'badge-done';
-            
-            const statusClass = study.status === 'pending' ? 'badge-pending' :
-                               study.status === 'reading' ? 'badge-reading' : 'badge-done';
+        // Your table doesn’t have study_date; show created_at
+        const studyDate = new Date(study.created_at).toLocaleDateString();
 
-            return `
-                <tr>
-                    <td data-label="Study ID">${study.study_id || 'N/A'}</td>
-                    <td data-label="Patient">
-                        <a href="../Patients/patient-detail.html?id=${study.patient_id}" 
-                           style="color: var(--brand); text-decoration: none;">
-                            ${patientName}
-                        </a>
-                    </td>
-                    <td data-label="Modality">${study.modality || 'N/A'}</td>
-                    <td data-label="Exam Type">${study.exam_type || 'N/A'}</td>
-                    <td data-label="Date">${studyDate}</td>
-                    <td data-label="Priority">
-                        <span class="badge ${priorityClass}">${(study.priority || 'routine').toUpperCase()}</span>
-                    </td>
-                    <td data-label="Status">
-                        <span class="badge ${statusClass}">${(study.status || 'pending').toUpperCase()}</span>
-                    </td>
-                    <td data-label="Actions">
-                        <a href="#" class="btn-grad" onclick="alert('Study viewer coming soon!'); return false;">View</a>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+        const priorityClass =
+        study.priority === 'stat'   ? 'badge-pending' :
+        study.priority === 'urgent' ? 'badge-reading' : 'badge-done';
+
+        const statusClass =
+        study.status === 'pending'  ? 'badge-pending' :
+        study.status === 'reading'  ? 'badge-reading' : 'badge-done';
+
+        // Exactly 8 <td> cells to match your header
+        return `
+        <tr>
+            <td data-label="Study ID">${study.study_id || 'N/A'}</td>
+            <td data-label="Patient">
+            <a href="../Patients/patient-detail.html?id=${study.patient_uuid}"
+                style="color: var(--brand); text-decoration: none;">
+                ${patientName}
+            </a>
+            </td>
+            <td data-label="Modality">N/A</td>
+            <td data-label="Exam Type">N/A</td>
+            <td data-label="Date">${studyDate}</td>
+            <td data-label="Priority">
+            <span class="badge ${priorityClass}">${(study.priority || 'routine').toUpperCase()}</span>
+            </td>
+            <td data-label="Status">
+            <span class="badge ${statusClass}">${(study.status || 'pending').toUpperCase()}</span>
+            </td>
+            <td data-label="Actions">
+            <a href="#" class="btn-grad" onclick="alert('Study viewer coming soon!'); return false;">View</a>
+            </td>
+        </tr>
+        `;
+    }).join('');
     }
+
 
     loadDashboard();
     })(); // Close async function
