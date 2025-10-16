@@ -1,0 +1,157 @@
+/* ===== DASHBOARD-SPECIFIC STYLES ===== */
+
+/* Dashboard-specific layouts */
+.welcome{
+grid-column: span 12;
+display:flex;
+gap:16px;
+align-items:center;
+padding:18px
+}
+
+.welcome .avatar-big{
+  width:56px;
+  height:56px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#8ec5fc,#e0c3fc);
+}
+
+.metrics{
+grid-column: span 12;
+display:grid; gap:16px;
+grid-template-columns:
+repeat(12, 1fr)
+}
+
+.metric{
+grid-column: span 12;
+padding:16px
+}
+
+.metric h4{
+margin:0 0 8px 0;
+font-size:13px;
+color:var(--muted);
+font-weight:600
+}
+
+.metric .val{
+font-size:24px;
+font-weight:800
+}
+
+.mini-chart{
+  margin-top:10px;
+  height:60px;
+  width:100%;
+  background: linear-gradient(180deg, color-mix(in lab, var(--brand) 18%, transparent), transparent 60%),
+              linear-gradient(to right, color-mix(in lab, var(--brand) 25%, transparent), transparent);
+  border-radius:10px;
+  border:1px dashed var(--line);
+}
+
+.overview{
+grid-column: span 12
+}
+
+@media (min-width: 720px){
+  .welcome{ grid-column: span 7 }
+  .metrics{ grid-column: span 12 }
+  .metric{ grid-column: span 4 }
+}
+@media (min-width: 1024px){
+  .welcome{ grid-column: span 12 }
+  .metric{ grid-column: span 3 }
+}
+
+/* Chart & legend */
+.chart{width:100%; height:180px; display:block}
+.legend{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+.dot{width:8px; height:8px; border-radius:999px; background:var(--brand)}
+.dot.alt{background:#16a34a}
+.kpi{display:flex; gap:18px; flex-wrap:wrap}
+.kpi .item{display:flex; flex-direction:column}
+.kpi .item b{font-size:20px; font-weight:700}
+
+/* --- Recent Studies table --- */
+.table-card{ grid-column: 1 / -1; }
+
+.table-wrap{ width:100%; overflow:auto; }
+.tbl{
+  width:100%; border-collapse:collapse; font-size:14px;
+  border-top:1px solid var(--line);
+}
+.tbl thead th{
+  text-align:left; color:var(--muted); font-weight:700;
+  padding:14px 10px; background:transparent; position:sticky; top:0;
+}
+.tbl tbody td{
+  padding:18px 10px; border-top:1px solid var(--line);
+}
+.tbl tr:hover td{ background: color-mix(in lab, var(--panel) 88%, var(--brand-weak) 12%); }
+
+/* Pills for status */
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 12px; border-radius:999px; font-weight:600; font-size:12px;
+}
+.badge-pending{ background:#FEF3C7; color:#92400E; }   /* amber */
+.badge-reading{ background:#D1FAE5; color:#065F46; }   /* teal/green */
+.badge-done{    background:#E5F4FF; color:#1E3A8A; }   /* blue */
+
+/* Gradient action button */
+.btn-grad{
+  display:inline-block; padding:10px 16px; border-radius:12px;
+  background: linear-gradient(135deg, var(--brand), #7a5af8);
+  color:#fff; text-decoration:none; font-weight:700;
+  box-shadow: 0 6px 16px rgba(109,93,252,.25);
+}
+.btn-grad:hover{ filter:saturate(1.1) brightness(1.03); transform: translateY(-1px); }
+.btn-grad:active{ transform: translateY(0); }
+.btn-grad.alt{ background: linear-gradient(135deg, #6366f1, #9333ea); }
+
+/* Mobile: stack to card-like rows */
+@media (max-width: 640px){
+  .tbl thead{ display:none; }
+  .tbl, .tbl tbody, .tbl tr, .tbl td{ display:block; width:100%; }
+  .tbl tr{ border-top:1px solid var(--line); padding:12px 0; }
+  .tbl td{
+    border:none; padding:8px 0;
+    display:flex; justify-content:space-between; gap:12px;
+  }
+  .tbl td::before{
+    content: attr(data-label);
+    color: var(--muted); font-weight:600;
+  }
+}
+
+/* Ensure full-width containers span all columns */
+.overview{ grid-column: 1 / -1; }
+.table-card{ grid-column: 1 / -1; }
+
+.skeleton {
+    background: linear-gradient(90deg, var(--line) 25%, var(--bg) 50%, var(--line) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+select.btn {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
+}
+
+#refreshBtn:hover {
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
+}
