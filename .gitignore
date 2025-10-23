@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+radiology-react/node_modules/
+
+# Build outputs
+/build
+/dist
+radiology-react/dist/
+radiology-react/build/
+
+# Environment variables
+.env
+.env.local
+.env.production
+radiology-react/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Package locks (optional - some teams commit this)
+# package-lock.json

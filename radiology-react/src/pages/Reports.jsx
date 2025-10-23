@@ -126,6 +126,7 @@ const Reports = () => {
                     
                     const uploadDate = study.created_at ? new Date(study.created_at).toLocaleDateString() : 'N/A'
                     const fileCount = study.dicom_files ? study.dicom_files.length : 0
+                    const fileText = fileCount === 1 ? 'file' : 'files'
                     const clinicalHistory = study.clinical_history || 'None provided'
                     const truncatedHistory = clinicalHistory.length > 50 ? 
                       clinicalHistory.substring(0, 50) + '...' : clinicalHistory
@@ -138,7 +139,13 @@ const Reports = () => {
                       >
                         <td data-label="Study ID">{study.study_id || 'N/A'}</td>
                         <td data-label="Patient">{patientName}</td>
-                        <td data-label="Files">{fileCount} file(s)</td>
+                        <td data-label="Files">
+                          {fileCount > 0 ? (
+                            <span style={{color: 'var(--ink)'}}>{fileCount} {fileText}</span>
+                          ) : (
+                            <span style={{color: 'var(--muted)'}}>No files</span>
+                          )}
+                        </td>
                         <td data-label="Upload Date">{uploadDate}</td>
                         <td data-label="Priority">
                           <span className={`badge ${priorityClass}`}>{priorityText}</span>

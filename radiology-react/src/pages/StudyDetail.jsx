@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { studyService } from '../services/studyService'
+import { supabase } from '../lib/supabase'
+import DicomViewer from '../components/DicomViewer'
 
 const StudyDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [study, setStudy] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showViewer, setShowViewer] = useState(false)
+  const [imageUrls, setImageUrls] = useState([])
 
   useEffect(() => {
     loadStudy()
@@ -22,6 +26,43 @@ const StudyDetail = () => {
       console.error('Error loading study:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleViewImages = async () => {
+    if (!study || !study.dicom_files || study.dicom_files.length === 0) {
+      alert('No DICOM files available to view')
+      return
+    }
+
+    try {
+      // Generate signed URLs for all DICOM files
+      const urls = []
+      for (const file of study.dicom_files) {
+        const { data, error } = await supabase.storage
+          .from('dicom-files')
+          .createSignedUrl(file.file_path, 3600) // 1 hour expiry
+
+        if (error) {
+          console.error('Error generating signed URL:', error)
+          continue
+        }
+
+        if (data?.signedUrl) {
+          urls.push(data.signedUrl)
+        }
+      }
+
+      if (urls.length === 0) {
+        alert('Failed to load DICOM files')
+        return
+      }
+
+      setImageUrls(urls)
+      setShowViewer(true)
+    } catch (error) {
+      console.error('Error loading images:', error)
+      alert('Failed to load images')
     }
   }
 
@@ -203,38 +244,71 @@ const StudyDetail = () => {
         </article>
 
         <article className="card" style={{gridColumn: '1 / -1'}}>
-          <div className="hd">DICOM Files</div>
+          <div className="hd">
+            DICOM Files ({study.dicom_files?.length || 0})
+            {study.dicom_files && study.dicom_files.length > 0 && (
+              <button
+                onClick={handleViewImages}
+                style={{
+                  marginLeft: 'auto',
+                  padding: '6px 16px',
+                  background: 'var(--brand)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span className="material-icons" style={{fontSize: '18px'}}>visibility</span>
+                View Images
+              </button>
+            )}
+          </div>
           <div className="bd">
             <div style={{padding: '20px'}}>
               {study.dicom_files && study.dicom_files.length > 0 ? (
                 <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                   {study.dicom_files.map((file, index) => {
-                    const sizeInMB = file.size ? (file.size / (1024 * 1024)).toFixed(2) : '0.00'
-                    const fileIcon = file.name && file.name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
+                    const sizeInMB = file.file_size ? (file.file_size / (1024 * 1024)).toFixed(2) : '0.00'
+                    const fileIcon = file.file_name && file.file_name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
+                    const uploadDate = file.uploaded_at ? new Date(file.uploaded_at).toLocaleString() : 'N/A'
                     
                     return (
-                      <div key={index} className="file-item">
+                      <div key={file.id} className="file-item">
                         <div className="file-item-info">
                           <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
                           <div style={{flex: 1, minWidth: 0}}>
-                            <div className="file-item-name">{file.name || `DICOM File ${index + 1}`}</div>
-                            <div className="file-item-size">{sizeInMB} MB</div>
+                            <div className="file-item-name">{file.file_name || `DICOM File ${index + 1}`}</div>
+                            <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
                           </div>
                         </div>
                         <div className="file-item-status">
-                          <span className="badge badge-done">Uploaded</span>
+                          <span className="badge badge-done">Ready</span>
                         </div>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <p style={{color: 'var(--muted)'}}>No DICOM files found</p>
+                <p style={{color: 'var(--muted)'}}>No DICOM files uploaded for this study</p>
               )}
             </div>
           </div>
         </article>
       </section>
+
+      {/* DICOM Viewer Modal */}
+      {showViewer && (
+        <DicomViewer 
+          imageUrls={imageUrls}
+          onClose={() => setShowViewer(false)}
+        />
+      )}
     </div>
   )
 }
