@@ -239,6 +239,7 @@ const UploadDicom = () => {
                       
                       // Count DICOM files
                       const fileCount = study.dicom_files ? study.dicom_files.length : 0
+                      const fileText = fileCount === 1 ? 'file' : 'files'
 
                       return (
                         <tr 
@@ -248,7 +249,15 @@ const UploadDicom = () => {
                         >
                           <td data-label="Study ID">{study.study_id || 'N/A'}</td>
                           <td data-label="Patient">{patientName}</td>
-                          <td data-label="Modality">DICOM ({fileCount} files)</td>
+                          <td data-label="Modality">
+                            {fileCount > 0 ? (
+                              <span style={{color: 'var(--ink)'}}>
+                                {fileCount} {fileText}
+                              </span>
+                            ) : (
+                              <span style={{color: 'var(--muted)'}}>No files</span>
+                            )}
+                          </td>
                           <td data-label="Study Date">{studyDate}</td>
                           <td data-label="Priority">
                             <span className={`badge ${priorityClass}`}>{priorityText}</span>

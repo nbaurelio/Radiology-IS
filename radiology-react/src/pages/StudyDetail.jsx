@@ -203,33 +203,34 @@ const StudyDetail = () => {
         </article>
 
         <article className="card" style={{gridColumn: '1 / -1'}}>
-          <div className="hd">DICOM Files</div>
+          <div className="hd">DICOM Files ({study.dicom_files?.length || 0})</div>
           <div className="bd">
             <div style={{padding: '20px'}}>
               {study.dicom_files && study.dicom_files.length > 0 ? (
                 <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                   {study.dicom_files.map((file, index) => {
-                    const sizeInMB = file.size ? (file.size / (1024 * 1024)).toFixed(2) : '0.00'
-                    const fileIcon = file.name && file.name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
+                    const sizeInMB = file.file_size ? (file.file_size / (1024 * 1024)).toFixed(2) : '0.00'
+                    const fileIcon = file.file_name && file.file_name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
+                    const uploadDate = file.uploaded_at ? new Date(file.uploaded_at).toLocaleString() : 'N/A'
                     
                     return (
-                      <div key={index} className="file-item">
+                      <div key={file.id} className="file-item">
                         <div className="file-item-info">
                           <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
                           <div style={{flex: 1, minWidth: 0}}>
-                            <div className="file-item-name">{file.name || `DICOM File ${index + 1}`}</div>
-                            <div className="file-item-size">{sizeInMB} MB</div>
+                            <div className="file-item-name">{file.file_name || `DICOM File ${index + 1}`}</div>
+                            <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
                           </div>
                         </div>
                         <div className="file-item-status">
-                          <span className="badge badge-done">Uploaded</span>
+                          <span className="badge badge-done">Ready</span>
                         </div>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <p style={{color: 'var(--muted)'}}>No DICOM files found</p>
+                <p style={{color: 'var(--muted)'}}>No DICOM files uploaded for this study</p>
               )}
             </div>
           </div>

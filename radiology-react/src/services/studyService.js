@@ -40,6 +40,7 @@ export const studyService = {
       const { data, error } = await supabase
         .from('studies')
         .select(`
+          id,
           study_id,
           patient_uuid,
           created_at,
@@ -48,7 +49,8 @@ export const studyService = {
           patients:patients!fk_patient (
             first_name,
             last_name
-          )
+          ),
+          dicom_files(id)
         `)
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -67,7 +69,8 @@ export const studyService = {
         .from('studies')
         .select(`
           *,
-          patients(id, patient_id, first_name, last_name)
+          patients(id, patient_id, first_name, last_name),
+          dicom_files(id)
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -86,7 +89,8 @@ export const studyService = {
         .from('studies')
         .select(`
           *,
-          patients(id, patient_id, first_name, last_name, date_of_birth, sex, phone, email)
+          patients(id, patient_id, first_name, last_name, date_of_birth, sex, phone, email),
+          dicom_files(id, file_name, file_path, file_size, mime_type, uploaded_at)
         `)
         .eq('id', studyId)
         .single()
