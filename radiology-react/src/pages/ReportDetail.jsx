@@ -6,6 +6,9 @@ const ReportDetail = () => {
   const { id } = useParams()
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editData, setEditData] = useState({})
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     loadReport()
@@ -42,7 +45,50 @@ const ReportDetail = () => {
                       (report && report.priority || 'routine').charAt(0).toUpperCase() + (report && report.priority || 'routine').slice(1)
 
   const handleEdit = () => {
-    alert('Edit functionality coming soon!')
+    setIsEditMode(true)
+    setEditData({
+      exam_type: report.exam_type || '',
+      modality: report.modality || '',
+      priority: report.priority || 'routine',
+      status: report.status || 'pending',
+      assigned_radiologist: report.assigned_radiologist || '',
+      findings: report.findings || '',
+      impression: report.impression || '',
+      recommendations: report.recommendations || '',
+      notes: report.notes || ''
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false)
+    setEditData({})
+  }
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setEditData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSaveEdit = async () => {
+    setSaving(true)
+    try {
+      const result = await reportService.updateReport(id, editData)
+      if (result.success) {
+        setReport(result.report)
+        setIsEditMode(false)
+        alert('Report updated successfully!')
+      } else {
+        alert(`Error updating report: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Error saving report:', error)
+      alert('An error occurred while saving. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) {
@@ -94,26 +140,57 @@ const ReportDetail = () => {
         >
           ← Back to Reports
         </Link>
-        <button 
-          onClick={handleEdit}
-          style={{
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '8px 12px', 
-            border: '1px solid var(--card-border)', 
-            borderRadius: 'var(--radius)', 
-            background: 'var(--panel)', 
-            color: 'var(--ink)', 
-            cursor: 'pointer', 
-            transition: 'border-color 0.2s ease', 
-            fontFamily: 'inherit', 
-            fontSize: '14px'
-          }}
-        >
-          <span className="material-icons" style={{fontSize: '21px', color: 'var(--muted)'}}>edit</span>
-          Edit Report
-        </button>
+        {!isEditMode ? (
+          <button 
+            onClick={handleEdit}
+            style={{
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '8px 12px', 
+              border: '1px solid var(--card-border)', 
+              borderRadius: 'var(--radius)', 
+              background: 'var(--panel)', 
+              color: 'var(--ink)', 
+              cursor: 'pointer', 
+              transition: 'border-color 0.2s ease', 
+              fontFamily: 'inherit', 
+              fontSize: '14px'
+            }}
+          >
+            <span className="material-icons" style={{fontSize: '21px', color: 'var(--muted)'}}>edit</span>
+            Edit Report
+          </button>
+        ) : (
+          <div style={{display: 'flex', gap: '12px'}}>
+            <button 
+              onClick={handleCancelEdit}
+              style={{
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '8px 16px', 
+                border: '1px solid var(--card-border)', 
+                borderRadius: 'var(--radius)', 
+                background: 'var(--panel)', 
+                color: 'var(--ink)', 
+                cursor: 'pointer', 
+                fontFamily: 'inherit', 
+                fontSize: '14px'
+              }}
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSaveEdit}
+              disabled={saving}
+              className="btn-create"
+              style={{padding: '8px 16px'}}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        )}
       </div>
 
       <section className="grid">
@@ -121,40 +198,107 @@ const ReportDetail = () => {
           <div className="hd">Report Information</div>
           <div className="bd">
             <div style={{padding: '20px'}}>
-              <div className="info-grid">
-                <div className="info-card">
-                  <div className="info-label">Study ID</div>
-                  <div className="info-value">{report.study_id || 'N/A'}</div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Exam Type</div>
-                  <div className="info-value">{report.exam_type || 'N/A'}</div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Modality</div>
-                  <div className="info-value">{report.modality || 'N/A'}</div>
-                </div>
-                <div className="info-card">
-                  <div className="info-label">Priority</div>
-                  <div className="info-value">
-                    <span className={`badge ${getPriorityBadgeClass(report.priority)}`}>
-                      {priorityText}
-                    </span>
+              {!isEditMode ? (
+                <div className="info-grid">
+                  <div className="info-card">
+                    <div className="info-label">Study ID</div>
+                    <div className="info-value">{report.study_id || 'N/A'}</div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-label">Exam Type</div>
+                    <div className="info-value">{report.exam_type || 'N/A'}</div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-label">Modality</div>
+                    <div className="info-value">{report.modality || 'N/A'}</div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-label">Priority</div>
+                    <div className="info-value">
+                      <span className={`badge ${getPriorityBadgeClass(report.priority)}`}>
+                        {priorityText}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-label">Status</div>
+                    <div className="info-value">
+                      <span className={`badge ${getStatusBadgeClass(report.status)}`}>
+                        {report.status ? report.status.toUpperCase() : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="info-card">
+                    <div className="info-label">Assigned Radiologist</div>
+                    <div className="info-value">{report.assigned_radiologist || 'Unassigned'}</div>
                   </div>
                 </div>
-                <div className="info-card">
-                  <div className="info-label">Status</div>
-                  <div className="info-value">
-                    <span className={`badge ${getStatusBadgeClass(report.status)}`}>
-                      {report.status ? report.status.toUpperCase() : 'N/A'}
-                    </span>
+              ) : (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Exam Type</label>
+                    <input
+                      type="text"
+                      name="exam_type"
+                      className="form-input"
+                      value={editData.exam_type}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Modality</label>
+                    <select
+                      name="modality"
+                      className="form-input"
+                      value={editData.modality}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select modality</option>
+                      <option value="CT">CT</option>
+                      <option value="MRI">MRI</option>
+                      <option value="X-Ray">X-Ray</option>
+                      <option value="Ultrasound">Ultrasound</option>
+                      <option value="PET">PET</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Priority</label>
+                    <select
+                      name="priority"
+                      className="form-input"
+                      value={editData.priority}
+                      onChange={handleInputChange}
+                    >
+                      <option value="routine">Routine</option>
+                      <option value="urgent">Urgent</option>
+                      <option value="stat">STAT</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select
+                      name="status"
+                      className="form-input"
+                      value={editData.status}
+                      onChange={handleInputChange}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="reading">Reading</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Assigned Radiologist</label>
+                    <input
+                      type="text"
+                      name="assigned_radiologist"
+                      className="form-input"
+                      value={editData.assigned_radiologist}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
-                <div className="info-card">
-                  <div className="info-label">Assigned Radiologist</div>
-                  <div className="info-value">{report.assigned_radiologist || 'Unassigned'}</div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </article>
@@ -258,44 +402,98 @@ const ReportDetail = () => {
           <div className="hd">Report Content</div>
           <div className="bd">
             <div style={{padding: '20px'}}>
-              <div style={{marginBottom: '24px'}}>
-                <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
-                  Findings
-                </h3>
-                <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
-                  {report.findings || 'No findings recorded.'}
-                </p>
-              </div>
+              {!isEditMode ? (
+                <>
+                  <div style={{marginBottom: '24px'}}>
+                    <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
+                      Findings
+                    </h3>
+                    <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
+                      {report.findings || 'No findings recorded.'}
+                    </p>
+                  </div>
 
-              <div style={{marginBottom: '24px'}}>
-                <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
-                  Impression
-                </h3>
-                <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
-                  {report.impression || 'No impression recorded.'}
-                </p>
-              </div>
+                  <div style={{marginBottom: '24px'}}>
+                    <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
+                      Impression
+                    </h3>
+                    <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
+                      {report.impression || 'No impression recorded.'}
+                    </p>
+                  </div>
 
-              {report.recommendations && (
-                <div style={{marginBottom: '24px'}}>
-                  <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
-                    Recommendations
-                  </h3>
-                  <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
-                    {report.recommendations}
-                  </p>
-                </div>
-              )}
+                  {report.recommendations && (
+                    <div style={{marginBottom: '24px'}}>
+                      <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
+                        Recommendations
+                      </h3>
+                      <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
+                        {report.recommendations}
+                      </p>
+                    </div>
+                  )}
 
-              {report.notes && (
-                <div>
-                  <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
-                    Notes
-                  </h3>
-                  <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
-                    {report.notes}
-                  </p>
-                </div>
+                  {report.notes && (
+                    <div>
+                      <h3 style={{fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--ink)'}}>
+                        Notes
+                      </h3>
+                      <p style={{color: 'var(--ink)', lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>
+                        {report.notes}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="form-group" style={{marginBottom: '20px'}}>
+                    <label>Findings</label>
+                    <textarea
+                      name="findings"
+                      className="form-input"
+                      rows="6"
+                      value={editData.findings}
+                      onChange={handleInputChange}
+                      placeholder="Enter findings..."
+                    />
+                  </div>
+
+                  <div className="form-group" style={{marginBottom: '20px'}}>
+                    <label>Impression</label>
+                    <textarea
+                      name="impression"
+                      className="form-input"
+                      rows="6"
+                      value={editData.impression}
+                      onChange={handleInputChange}
+                      placeholder="Enter impression..."
+                    />
+                  </div>
+
+                  <div className="form-group" style={{marginBottom: '20px'}}>
+                    <label>Recommendations</label>
+                    <textarea
+                      name="recommendations"
+                      className="form-input"
+                      rows="4"
+                      value={editData.recommendations}
+                      onChange={handleInputChange}
+                      placeholder="Enter recommendations..."
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Notes</label>
+                    <textarea
+                      name="notes"
+                      className="form-input"
+                      rows="4"
+                      value={editData.notes}
+                      onChange={handleInputChange}
+                      placeholder="Enter additional notes..."
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>

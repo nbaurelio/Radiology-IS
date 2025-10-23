@@ -352,7 +352,7 @@ const AddReport = () => {
 
             <div className="form-row">
               <div className="form-group full-width">
-                <label htmlFor="findings">Findings <span className="required">*</span></label>
+                <label htmlFor="findings">Findings</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon" style={{top: '12px'}}>description</span>
                   <textarea 
@@ -363,7 +363,6 @@ const AddReport = () => {
                     rows="6"
                     value={formData.findings}
                     onChange={handleInputChange}
-                    required
                   ></textarea>
                 </div>
               </div>
@@ -371,7 +370,7 @@ const AddReport = () => {
 
             <div className="form-row">
               <div className="form-group full-width">
-                <label htmlFor="impression">Impression <span className="required">*</span></label>
+                <label htmlFor="impression">Impression</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon" style={{top: '12px'}}>psychology</span>
                   <textarea 
@@ -382,7 +381,6 @@ const AddReport = () => {
                     rows="4"
                     value={formData.impression}
                     onChange={handleInputChange}
-                    required
                   ></textarea>
                 </div>
               </div>

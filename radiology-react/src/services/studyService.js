@@ -156,90 +156,46 @@ export const studyService = {
 
   async generateStudyId() {
     try {
+      const currentYear = new Date().getFullYear()
+      const yearPrefix = `STU-${currentYear}-`
+
       const { data, error } = await supabase
         .from('studies')
         .select('study_id')
         .not('study_id', 'is', null)
+        .like('study_id', `${yearPrefix}%`)
         .order('created_at', { ascending: false })
         .limit(100)
 
       if (error) throw error
 
       if (!data || data.length === 0) {
-        return 'STU-0001'
+        return `${yearPrefix}0001`
       }
 
-      let highestId = 'STU-0000'
+      let highestNumber = 0
       for (const record of data) {
-        if (record.study_id && record.study_id.startsWith('STU-')) {
-          if (this.compareStudyIds(record.study_id, highestId) > 0) {
-            highestId = record.study_id
+        if (record.study_id && record.study_id.startsWith(yearPrefix)) {
+          const match = record.study_id.match(/^STU-\d{4}-(\d{4})$/)
+          if (match) {
+            const number = parseInt(match[1])
+            if (number > highestNumber) {
+              highestNumber = number
+            }
           }
         }
       }
 
-      return this.incrementStudyId(highestId)
+      const nextNumber = highestNumber + 1
+      if (nextNumber > 9999) {
+        throw new Error('Study ID limit reached for this year (9999)')
+      }
+
+      return `${yearPrefix}${nextNumber.toString().padStart(4, '0')}`
     } catch (error) {
       console.error('Generate study ID error:', error)
-      return 'STU-0001'
+      const currentYear = new Date().getFullYear()
+      return `STU-${currentYear}-0001`
     }
-  },
-
-  compareStudyIds(a, b) {
-    const parseId = (id) => {
-      const match = id.match(/^STU-([A-Z]*)(\d+)$/)
-      if (!match) return { prefix: '', number: 0 }
-      return { prefix: match[1], number: parseInt(match[2]) }
-    }
-
-    const idA = parseId(a)
-    const idB = parseId(b)
-
-    if (idA.prefix.length !== idB.prefix.length) {
-      return idA.prefix.length - idB.prefix.length
-    }
-
-    if (idA.prefix !== idB.prefix) {
-      return idA.prefix.localeCompare(idB.prefix)
-    }
-
-    return idA.number - idB.number
-  },
-
-  incrementStudyId(lastId) {
-    const match = lastId.match(/^STU-([A-Z]*)(\d+)$/)
-    if (!match) return 'STU-0001'
-
-    let prefix = match[1]
-    let number = parseInt(match[2])
-
-    number++
-
-    if (number > 9999) {
-      number = 0
-      prefix = this.incrementPrefix(prefix)
-    }
-
-    return `STU-${prefix}${number.toString().padStart(4, '0')}`
-  },
-
-  incrementPrefix(prefix) {
-    if (!prefix) return 'A'
-    
-    const chars = prefix.split('')
-    
-    for (let i = chars.length - 1; i >= 0; i--) {
-      if (chars[i] === 'Z') {
-        chars[i] = 'A'
-        if (i === 0) {
-          return 'A' + chars.join('')
-        }
-      } else {
-        chars[i] = String.fromCharCode(chars[i].charCodeAt(0) + 1)
-        return chars.join('')
-      }
-    }
-    
-    return chars.join('')
   }
 }

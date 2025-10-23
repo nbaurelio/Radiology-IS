@@ -104,14 +104,57 @@ const UploadDicom = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    alert('DICOM upload functionality coming soon!')
-    setShowModal(false)
-    setSelectedFiles([])
-    setSelectedPatient('')
-    setClinicalHistory('')
-    setExamPriority('routine')
+    
+    if (!selectedPatient) {
+      alert('Please select a patient')
+      return
+    }
+    
+    if (selectedFiles.length === 0) {
+      alert('Please select at least one DICOM file')
+      return
+    }
+    
+    setLoading(true)
+    
+    try {
+      // Generate study ID
+      const studyId = await studyService.generateStudyId()
+      
+      // Create study data
+      const studyData = {
+        study_id: studyId,
+        patient_uuid: selectedPatient,
+        clinical_history: clinicalHistory || null,
+        priority: examPriority,
+        status: 'pending'
+      }
+      
+      const result = await studyService.createStudy(studyData)
+      
+      if (result.success) {
+        alert(`Study uploaded successfully!\nStudy ID: ${result.study.study_id}\nFiles: ${selectedFiles.length}`)
+        
+        // Reset form and close modal
+        setShowModal(false)
+        setSelectedFiles([])
+        setSelectedPatient('')
+        setClinicalHistory('')
+        setExamPriority('routine')
+        
+        // Reload studies list
+        await loadStudies()
+      } else {
+        alert(`Error uploading study: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert('An error occurred while uploading. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getPriorityBadgeClass = (priority) => {
@@ -237,7 +280,7 @@ const UploadDicom = () => {
                   <div className="form-group full-width">
                     <label htmlFor="patientSelect">Select Patient <span className="required">*</span></label>
                     <div className="input-with-icon">
-                      <span className="input-icon">person</span>
+                      <span className="material-icons input-icon">person</span>
                       <select 
                         id="patientSelect" 
                         className="form-input" 
@@ -327,7 +370,7 @@ const UploadDicom = () => {
                   <div className="form-group">
                     <label htmlFor="clinicalHistory">Clinical History</label>
                     <div className="input-with-icon">
-                      <span className="input-icon">notes</span>
+                      <span className="material-icons input-icon">notes</span>
                       <input 
                         type="text" 
                         id="clinicalHistory" 
@@ -341,7 +384,7 @@ const UploadDicom = () => {
                   <div className="form-group">
                     <label htmlFor="examPriority">Exam Priority <span className="required">*</span></label>
                     <div className="input-with-icon">
-                      <span className="input-icon">priority_high</span>
+                      <span className="material-icons input-icon">priority_high</span>
                       <select 
                         id="examPriority" 
                         className="form-input" 

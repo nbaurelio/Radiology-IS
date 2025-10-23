@@ -1,94 +1,50 @@
 import { supabase } from '../lib/supabase'
 
 export const patientService = {
-  // Generate next Patient ID (PAT-0001, PAT-0002, ..., PAT-9999, PAT-A0000, etc.)
+  // Generate next Patient ID (PAT-2025-0001, PAT-2025-0002, etc.)
   async generatePatientId() {
     try {
+      const currentYear = new Date().getFullYear()
+      const yearPrefix = `PAT-${currentYear}-`
+
       const { data, error } = await supabase
         .from('patients')
         .select('patient_id')
         .not('patient_id', 'is', null)
+        .like('patient_id', `${yearPrefix}%`)
         .order('created_at', { ascending: false })
         .limit(100)
 
       if (error) throw error
 
       if (!data || data.length === 0) {
-        return 'PAT-0001'
+        return `${yearPrefix}0001`
       }
 
-      let highestId = 'PAT-0000'
+      let highestNumber = 0
       for (const record of data) {
-        if (record.patient_id && record.patient_id.startsWith('PAT-')) {
-          if (this.comparePatientIds(record.patient_id, highestId) > 0) {
-            highestId = record.patient_id
+        if (record.patient_id && record.patient_id.startsWith(yearPrefix)) {
+          const match = record.patient_id.match(/^PAT-\d{4}-(\d{4})$/)
+          if (match) {
+            const number = parseInt(match[1])
+            if (number > highestNumber) {
+              highestNumber = number
+            }
           }
         }
       }
 
-      return this.incrementPatientId(highestId)
+      const nextNumber = highestNumber + 1
+      if (nextNumber > 9999) {
+        throw new Error('Patient ID limit reached for this year (9999)')
+      }
+
+      return `${yearPrefix}${nextNumber.toString().padStart(4, '0')}`
     } catch (error) {
       console.error('Generate patient ID error:', error)
-      return 'PAT-0001'
+      const currentYear = new Date().getFullYear()
+      return `PAT-${currentYear}-0001`
     }
-  },
-
-  comparePatientIds(a, b) {
-    const parseId = (id) => {
-      const match = id.match(/^PAT-([A-Z]*)(\d+)$/)
-      if (!match) return { prefix: '', number: 0 }
-      return { prefix: match[1], number: parseInt(match[2]) }
-    }
-
-    const idA = parseId(a)
-    const idB = parseId(b)
-
-    if (idA.prefix.length !== idB.prefix.length) {
-      return idA.prefix.length - idB.prefix.length
-    }
-
-    if (idA.prefix !== idB.prefix) {
-      return idA.prefix.localeCompare(idB.prefix)
-    }
-
-    return idA.number - idB.number
-  },
-
-  incrementPatientId(lastId) {
-    const match = lastId.match(/^PAT-([A-Z]*)(\d+)$/)
-    if (!match) return 'PAT-0001'
-
-    let prefix = match[1]
-    let number = parseInt(match[2])
-
-    number++
-
-    if (number > 9999) {
-      number = 0
-      prefix = this.incrementPrefix(prefix)
-    }
-
-    return `PAT-${prefix}${number.toString().padStart(4, '0')}`
-  },
-
-  incrementPrefix(prefix) {
-    if (!prefix) return 'A'
-    
-    const chars = prefix.split('')
-    
-    for (let i = chars.length - 1; i >= 0; i--) {
-      if (chars[i] === 'Z') {
-        chars[i] = 'A'
-        if (i === 0) {
-          return 'A' + chars.join('')
-        }
-      } else {
-        chars[i] = String.fromCharCode(chars[i].charCodeAt(0) + 1)
-        return chars.join('')
-      }
-    }
-    
-    return chars.join('')
   },
 
   async createPatient(patientData) {
@@ -160,7 +116,15 @@ export const patientService = {
         .eq('patient_uuid', patientId)
         .order('created_at', { ascending: false })
 
-      const pendingStudies = (studies || []).filter(s => s.status !== 'completed')
+      // Get study IDs that already have reports
+      const reportedStudyIds = (reports || [])
+        .filter(r => r.study_id)
+        .map(r => r.study_id)
+      
+      // Filter studies: exclude completed ones and ones that already have reports
+      const pendingStudies = (studies || []).filter(s => 
+        s.status !== 'completed' && !reportedStudyIds.includes(s.study_id)
+      )
       
       const combinedAppointments = [
         ...(reports || []).map(r => ({ ...r, type: 'report' })),

@@ -505,7 +505,7 @@ body.login-page{
 
 .login-container{
   width: 100%;
-  max-width: 420px;
+  max-width: 720px;
 }
 
 .login-card{
@@ -513,7 +513,7 @@ body.login-page{
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   box-shadow: none;
-  padding: 40px;
+  padding: 65px 100px;
   animation: fadeInUp 0.5s ease;
 }
 
@@ -775,8 +775,9 @@ body.login-page{
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
   align-items: center;
   justify-content: center;

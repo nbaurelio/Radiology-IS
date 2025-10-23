@@ -119,6 +119,31 @@ export const reportService = {
     }
   },
 
+  async updateReport(reportId, updateData) {
+    try {
+      const { data: report, error } = await supabase
+        .from('reports')
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString(),
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', reportId)
+        .select(`
+          *,
+          patients(*)
+        `)
+        .single()
+
+      if (error) throw error
+      
+      return { success: true, report: report }
+    } catch (error) {
+      console.error('Update report error:', error)
+      return { success: false, message: error.message }
+    }
+  },
+
   async getAllPatients() {
     try {
       const { data, error } = await supabase
