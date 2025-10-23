@@ -40,6 +40,7 @@ export const studyService = {
       const { data, error } = await supabase
         .from('studies')
         .select(`
+          id,
           study_id,
           patient_uuid,
           created_at,
@@ -267,6 +268,55 @@ export const studyService = {
         uploadedCount: 0,
         message: error.message
       }
+    }
+  },
+
+  async deleteStudy(studyId, studyIdString) {
+    try {
+      // First, get all DICOM files associated with this study
+      const { data: dicomFiles, error: filesError } = await supabase
+        .from('dicom_files')
+        .select('file_path')
+        .eq('study_id', studyId)
+
+      if (filesError) {
+        console.error('Error fetching DICOM files:', filesError)
+      }
+
+      // Delete files from storage if they exist
+      if (dicomFiles && dicomFiles.length > 0) {
+        const filePaths = dicomFiles.map(file => file.file_path)
+        const { error: storageError } = await supabase.storage
+          .from('dicom-files')
+          .remove(filePaths)
+
+        if (storageError) {
+          console.error('Error deleting files from storage:', storageError)
+        }
+      }
+
+      // Delete DICOM file records from database
+      const { error: deleteFilesError } = await supabase
+        .from('dicom_files')
+        .delete()
+        .eq('study_id', studyId)
+
+      if (deleteFilesError) {
+        console.error('Error deleting DICOM file records:', deleteFilesError)
+      }
+
+      // Delete the study record
+      const { error: deleteStudyError } = await supabase
+        .from('studies')
+        .delete()
+        .eq('id', studyId)
+
+      if (deleteStudyError) throw deleteStudyError
+
+      return { success: true, message: 'Study deleted successfully' }
+    } catch (error) {
+      console.error('Delete study error:', error)
+      return { success: false, message: error.message }
     }
   }
 }
