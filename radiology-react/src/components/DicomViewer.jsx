@@ -53,6 +53,10 @@ const DicomViewer = ({ imageUrls, onClose }) => {
 
         const element = elementRef.current
 
+        // Set explicit dimensions
+        element.style.width = '100%'
+        element.style.height = '600px'
+
         // Enable element
         cornerstone.enable(element)
 
@@ -62,13 +66,12 @@ const DicomViewer = ({ imageUrls, onClose }) => {
 
         // Load image
         const image = await cornerstone.loadImage(imageId)
-        console.log('Image loaded successfully')
+        console.log('Image loaded successfully', image)
 
         // Display image
         cornerstone.displayImage(element, image)
 
-        // Reset and fit viewport
-        cornerstone.reset(element)
+        // Fit to window
         cornerstone.fitToWindow(element)
 
         console.log('Image displayed and fitted to window')
