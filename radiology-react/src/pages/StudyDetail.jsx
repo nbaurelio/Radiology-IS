@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { studyService } from '../services/studyService'
+import { supabase } from '../lib/supabase'
+import DicomViewer from '../components/DicomViewer'
 
 const StudyDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [study, setStudy] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showViewer, setShowViewer] = useState(false)
+  const [imageUrls, setImageUrls] = useState([])
 
   useEffect(() => {
     loadStudy()
@@ -22,6 +26,43 @@ const StudyDetail = () => {
       console.error('Error loading study:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleViewImages = async () => {
+    if (!study || !study.dicom_files || study.dicom_files.length === 0) {
+      alert('No DICOM files available to view')
+      return
+    }
+
+    try {
+      // Generate signed URLs for all DICOM files
+      const urls = []
+      for (const file of study.dicom_files) {
+        const { data, error } = await supabase.storage
+          .from('dicom-files')
+          .createSignedUrl(file.file_path, 3600) // 1 hour expiry
+
+        if (error) {
+          console.error('Error generating signed URL:', error)
+          continue
+        }
+
+        if (data?.signedUrl) {
+          urls.push(data.signedUrl)
+        }
+      }
+
+      if (urls.length === 0) {
+        alert('Failed to load DICOM files')
+        return
+      }
+
+      setImageUrls(urls)
+      setShowViewer(true)
+    } catch (error) {
+      console.error('Error loading images:', error)
+      alert('Failed to load images')
     }
   }
 
@@ -203,7 +244,31 @@ const StudyDetail = () => {
         </article>
 
         <article className="card" style={{gridColumn: '1 / -1'}}>
-          <div className="hd">DICOM Files ({study.dicom_files?.length || 0})</div>
+          <div className="hd">
+            DICOM Files ({study.dicom_files?.length || 0})
+            {study.dicom_files && study.dicom_files.length > 0 && (
+              <button
+                onClick={handleViewImages}
+                style={{
+                  marginLeft: 'auto',
+                  padding: '6px 16px',
+                  background: 'var(--brand)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span className="material-icons" style={{fontSize: '18px'}}>visibility</span>
+                View Images
+              </button>
+            )}
+          </div>
           <div className="bd">
             <div style={{padding: '20px'}}>
               {study.dicom_files && study.dicom_files.length > 0 ? (
@@ -236,6 +301,14 @@ const StudyDetail = () => {
           </div>
         </article>
       </section>
+
+      {/* DICOM Viewer Modal */}
+      {showViewer && (
+        <DicomViewer 
+          imageUrls={imageUrls}
+          onClose={() => setShowViewer(false)}
+        />
+      )}
     </div>
   )
 }
