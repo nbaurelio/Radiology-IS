@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo  Radiology IS - React Installation
+echo  XferDx - React Installation
 echo ========================================
 echo.
 

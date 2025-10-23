@@ -75,11 +75,10 @@ body{
 .brand .logo{
   width:28px; 
   height:28px; 
-  display:grid; 
-  place-items:center; 
-  border-radius:10px;
-  background: radial-gradient(120% 120% at 20% 20%, var(--brand) 0%, #30e1c7 40%, #ffd166 100%);
-  box-shadow: 0 6px 14px rgba(0,0,0,.12), inset 0 0 0 2px rgba(255,255,255,.25);
+  background-image: url('/src/assets/xferdx-logo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .brand small{
@@ -537,9 +536,10 @@ body.login-page{
   width: 64px;
   height: 64px;
   margin: 0 auto 16px;
-  border-radius: 16px;
-  background: radial-gradient(120% 120% at 20% 20%, var(--brand) 0%, #30e1c7 40%, #ffd166 100%);
-  box-shadow: 0 8px 20px rgba(0,0,0,.15), inset 0 0 0 2px rgba(255,255,255,.25);
+  background-image: url('/src/assets/xferdx-logo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .login-header h1{

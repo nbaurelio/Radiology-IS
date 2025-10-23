@@ -66,7 +66,7 @@ const Login = () => {
         <div className="login-card">
           <div className="login-header">
             <div className="logo-large"></div>
-            <h1>Radiology IS</h1>
+            <h1>XferDx</h1>
             <p className="subtitle">Sign in to your account</p>
           </div>
 

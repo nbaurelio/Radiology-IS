@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo  Starting Radiology IS - React
+echo  Starting XferDx - React
 echo ========================================
 echo.
 

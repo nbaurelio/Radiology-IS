@@ -11,7 +11,7 @@ function createHeader(activePage) {
                 <div class="brand">
                     <span class="logo"></span>
                     <div>
-                        Radiology IS
+                        XferDx
                         <small>${getPageTitle(activePage)}</small>
                     </div>
                 </div>

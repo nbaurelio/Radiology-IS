@@ -1,4 +1,4 @@
-# Radiology IS Documentation
+# XferDx Documentation
 
 This folder contains all documentation and guides for the Radiology Information System.
 

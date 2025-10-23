@@ -116,7 +116,7 @@ const Header = () => {
         <div className="brand">
           <span className="logo"></span>
           <div>
-            Radiology IS
+            XferDx
             <small>{getPageTitle(location.pathname)}</small>
           </div>
         </div>

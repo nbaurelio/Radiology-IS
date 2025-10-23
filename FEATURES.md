@@ -1,4 +1,4 @@
-# 📋 Radiology IS System Features
+# 📋 XferDx System Features
 
 ## 🔐 **1. Login Page**
 
