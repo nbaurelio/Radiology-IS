@@ -97,11 +97,13 @@ const Header = () => {
       '/telehealth': 'Telehealth',
       '/patients': 'Patients',
       '/patients/add': 'Add Patient',
-      '/reports/add': 'Add Report'
+      '/reports/add': 'Add Report',
+      '/admin': 'Admin'
     }
     return titles[pathname] || 'Dashboard'
   }
 
+  // Build navigation items
   const navItems = [
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/upload', label: 'Upload DICOM' },
@@ -109,6 +111,11 @@ const Header = () => {
     { path: '/telehealth', label: 'Telehealth' },
     { path: '/patients', label: 'Patients' }
   ]
+
+  // Add Admin tab only for Administrator users
+  if (user?.userType === 'Hospital Admin' || user?.userType === 'Administrator') {
+    navItems.push({ path: '/admin', label: 'Admin' })
+  }
 
   return (
     <header className="topnav">
