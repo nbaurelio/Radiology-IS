@@ -165,5 +165,52 @@ export const patientService = {
       console.error('Update patient error:', error)
       return { success: false, message: error.message }
     }
+  },
+
+  async deletePatient(patientId) {
+    try {
+      // First check if patient has any associated studies
+      const { data: studies, error: studiesError } = await supabase
+        .from('studies')
+        .select('id')
+        .eq('patient_uuid', patientId)
+
+      if (studiesError) throw studiesError
+
+      if (studies && studies.length > 0) {
+        return { 
+          success: false, 
+          message: 'Cannot delete patient. Please delete all associated studies first.' 
+        }
+      }
+
+      // Check if patient has any associated reports
+      const { data: reports, error: reportsError } = await supabase
+        .from('reports')
+        .select('id')
+        .eq('patient_id', patientId)
+
+      if (reportsError) throw reportsError
+
+      if (reports && reports.length > 0) {
+        return { 
+          success: false, 
+          message: 'Cannot delete patient. Please delete all associated reports first.' 
+        }
+      }
+
+      // If no dependencies, delete the patient
+      const { error: deleteError } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', patientId)
+
+      if (deleteError) throw deleteError
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Delete patient error:', error)
+      return { success: false, message: error.message }
+    }
   }
 }

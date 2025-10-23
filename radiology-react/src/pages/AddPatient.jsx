@@ -5,6 +5,8 @@ import { patientService } from '../services/patientService'
 const AddPatient = () => {
   const [patientId, setPatientId] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mrnNumber, setMrnNumber] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
 
   useEffect(() => {
     loadPatientId()
@@ -35,13 +37,13 @@ const AddPatient = () => {
     
     const patientData = {
       patient_id: document.getElementById('patientId').value.trim(),
-      mrn: document.getElementById('mrn').value.trim() || null,
+      mrn: mrnNumber ? `MRN-${mrnNumber}` : null,
       first_name: firstName,
       last_name: lastName,
       name: `${firstName} ${lastName}`,
       date_of_birth: document.getElementById('dateOfBirth').value || null,
       sex: document.getElementById('patientSex').value,
-      phone: document.getElementById('phoneNumber').value.trim(),
+      phone: phoneNumber,
       email: document.getElementById('contactEmail').value.trim() || null,
       address: document.getElementById('address').value.trim() || null,
       medical_history: document.getElementById('medicalHistory').value.trim() || null,
@@ -114,6 +116,7 @@ const AddPatient = () => {
                     readOnly 
                     required 
                     value={patientId}
+                    style={{paddingLeft: '40px'}}
                   />
                 </div>
                 <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
@@ -122,9 +125,29 @@ const AddPatient = () => {
               </div>
               <div className="form-group">
                 <label htmlFor="mrn">Medical Record Number (MRN)</label>
-                <div className="input-with-icon">
+                <div className="input-with-icon" style={{position: 'relative'}}>
                   <span className="material-icons input-icon">assignment</span>
-                  <input type="text" id="mrn" className="form-input" placeholder="Ex: MRN-12345" />
+                  <span style={{
+                    position: 'absolute',
+                    left: '40px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--ink)',
+                    pointerEvents: 'none',
+                    zIndex: 1
+                  }}>MRN-</span>
+                  <input 
+                    type="text" 
+                    id="mrn" 
+                    className="form-input" 
+                    placeholder="12345" 
+                    value={mrnNumber}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '')
+                      setMrnNumber(value)
+                    }}
+                    style={{paddingLeft: '85px'}} 
+                  />
                 </div>
               </div>
             </div>
@@ -134,14 +157,14 @@ const AddPatient = () => {
                 <label htmlFor="firstName">First Name <span className="required">*</span></label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">person</span>
-                  <input type="text" id="firstName" className="form-input" placeholder="Ex: John" required />
+                  <input type="text" id="firstName" className="form-input" placeholder="Ex: John" required style={{paddingLeft: '40px'}} />
                 </div>
               </div>
               <div className="form-group">
                 <label htmlFor="lastName">Last Name <span className="required">*</span></label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">person</span>
-                  <input type="text" id="lastName" className="form-input" placeholder="Ex: Doe" required />
+                  <input type="text" id="lastName" className="form-input" placeholder="Ex: Doe" required style={{paddingLeft: '40px'}} />
                 </div>
               </div>
             </div>
@@ -151,14 +174,14 @@ const AddPatient = () => {
                 <label htmlFor="dateOfBirth">Date of Birth <span className="required">*</span></label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">cake</span>
-                  <input type="date" id="dateOfBirth" className="form-input" required />
+                  <input type="date" id="dateOfBirth" className="form-input" required style={{paddingLeft: '40px'}} />
                 </div>
               </div>
               <div className="form-group">
                 <label htmlFor="patientSex">Sex <span className="required">*</span></label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">wc</span>
-                  <select id="patientSex" className="form-input" required>
+                  <select id="patientSex" className="form-input" required style={{paddingLeft: '40px'}}>
                     <option value="">Select sex</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -179,14 +202,26 @@ const AddPatient = () => {
                 <label htmlFor="phoneNumber">Phone Number <span className="required">*</span></label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">phone</span>
-                  <input type="tel" id="phoneNumber" className="form-input" placeholder="Ex: +1 555 123 4567" required />
+                  <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    className="form-input" 
+                    placeholder="Ex: 15551234567" 
+                    value={phoneNumber}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '')
+                      setPhoneNumber(value)
+                    }}
+                    required 
+                    style={{paddingLeft: '40px'}} 
+                  />
                 </div>
               </div>
               <div className="form-group">
                 <label htmlFor="contactEmail">Email Address</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">email</span>
-                  <input type="email" id="contactEmail" className="form-input" placeholder="Ex: patient@email.com" />
+                  <input type="email" id="contactEmail" className="form-input" placeholder="Ex: patient@email.com" style={{paddingLeft: '40px'}} />
                 </div>
               </div>
             </div>
@@ -196,7 +231,7 @@ const AddPatient = () => {
                 <label htmlFor="address">Address</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">home</span>
-                  <input type="text" id="address" className="form-input" placeholder="Ex: 123 Main St, City, State, ZIP" />
+                  <input type="text" id="address" className="form-input" placeholder="Ex: 123 Main St, City, State, ZIP" style={{paddingLeft: '40px'}} />
                 </div>
               </div>
             </div>
@@ -216,6 +251,7 @@ const AddPatient = () => {
                     id="medicalHistory" 
                     className="form-input" 
                     placeholder="Enter relevant medical history, conditions, allergies, etc."
+                    style={{paddingLeft: '40px'}}
                   ></textarea>
                 </div>
               </div>
@@ -223,11 +259,11 @@ const AddPatient = () => {
           </div>
 
           {/* Form Actions */}
-          <div className="form-actions">
-            <button type="button" className="btn-cancel" onClick={handleCancel}>
+          <div className="form-actions" style={{alignItems: 'center'}}>
+            <button type="button" className="btn-cancel" onClick={handleCancel} style={{height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
               Cancel
             </button>
-            <button type="submit" className="btn-create" disabled={loading}>
+            <button type="submit" className="btn-create" disabled={loading} style={{height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
               {loading ? 'Creating...' : 'Create Patient Profile'}
             </button>
           </div>

@@ -172,7 +172,8 @@ const AddReport = () => {
                     readOnly={!!studyData}
                     style={{
                       background: studyData ? 'var(--bg)' : 'var(--panel)',
-                      cursor: studyData ? 'not-allowed' : 'text'
+                      cursor: studyData ? 'not-allowed' : 'text',
+                      paddingLeft: '40px'
                     }}
                     required 
                   />
@@ -190,7 +191,8 @@ const AddReport = () => {
                     disabled={!!studyData}
                     style={{
                       background: studyData ? 'var(--bg)' : 'var(--panel)',
-                      cursor: studyData ? 'not-allowed' : 'pointer'
+                      cursor: studyData ? 'not-allowed' : 'pointer',
+                      paddingLeft: '40px'
                     }}
                     required
                   >
@@ -216,6 +218,7 @@ const AddReport = () => {
                     className="form-input"
                     value={formData.exam_type}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                     required
                   >
                     <option value="">Select exam type</option>
@@ -241,6 +244,7 @@ const AddReport = () => {
                     className="form-input"
                     value={formData.appointment_date}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                     required 
                   />
                 </div>
@@ -258,6 +262,7 @@ const AddReport = () => {
                     className="form-input"
                     value={formData.modality}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                   >
                     <option value="">Select modality</option>
                     <option value="CR">CR - Computed Radiography</option>
@@ -281,6 +286,7 @@ const AddReport = () => {
                     className="form-input"
                     value={formData.priority}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                     required
                   >
                     <option value="routine">Routine</option>
@@ -302,6 +308,7 @@ const AddReport = () => {
                     className="form-input"
                     value={formData.status}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                     required
                   >
                     <option value="pending">Pending</option>
@@ -322,6 +329,7 @@ const AddReport = () => {
                     placeholder="Ex: Dr. Smith"
                     value={formData.assigned_radiologist}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                   />
                 </div>
               </div>
@@ -340,6 +348,7 @@ const AddReport = () => {
                     rows="3"
                     value={formData.notes}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                   ></textarea>
                 </div>
               </div>
@@ -363,6 +372,7 @@ const AddReport = () => {
                     rows="6"
                     value={formData.findings}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                   ></textarea>
                 </div>
               </div>
@@ -381,6 +391,7 @@ const AddReport = () => {
                     rows="4"
                     value={formData.impression}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                   ></textarea>
                 </div>
               </div>
@@ -399,6 +410,7 @@ const AddReport = () => {
                     rows="3"
                     value={formData.recommendations}
                     onChange={handleInputChange}
+                    style={{paddingLeft: '40px'}}
                   ></textarea>
                 </div>
               </div>
@@ -406,11 +418,11 @@ const AddReport = () => {
           </div>
 
           {/* Form Actions */}
-          <div className="form-actions">
-            <button type="button" className="btn-cancel" onClick={handleCancel}>
+          <div className="form-actions" style={{alignItems: 'center'}}>
+            <button type="button" className="btn-cancel" onClick={handleCancel} style={{height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
               Cancel
             </button>
-            <button type="submit" className="btn-create" disabled={loading}>
+            <button type="submit" className="btn-create" disabled={loading} style={{height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
               {loading ? 'Creating...' : 'Create Report'}
             </button>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Trash2 } from 'lucide-react'
 import { studyService } from '../services/studyService'
 import { patientService } from '../services/patientService'
 
@@ -13,6 +14,8 @@ const UploadDicom = () => {
   const [clinicalHistory, setClinicalHistory] = useState('')
   const [examPriority, setExamPriority] = useState('routine')
   const [dragActive, setDragActive] = useState(false)
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
+  const [studyToDelete, setStudyToDelete] = useState(null)
 
   useEffect(() => {
     loadStudies()
@@ -30,6 +33,40 @@ const UploadDicom = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDeleteClick = (e, study) => {
+    e.stopPropagation()
+    setStudyToDelete(study)
+    setDeleteConfirmModal(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!studyToDelete) return
+    
+    setLoading(true)
+    try {
+      const result = await studyService.deleteStudy(studyToDelete.id, studyToDelete.study_id)
+      
+      if (result.success) {
+        alert('Study deleted successfully')
+        await loadStudies()
+      } else {
+        alert(`Error deleting study: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('An error occurred while deleting the study')
+    } finally {
+      setLoading(false)
+      setDeleteConfirmModal(false)
+      setStudyToDelete(null)
+    }
+  }
+
+  const cancelDelete = () => {
+    setDeleteConfirmModal(false)
+    setStudyToDelete(null)
   }
 
   const loadPatients = async () => {
@@ -209,18 +246,19 @@ const UploadDicom = () => {
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Study ID</th>
-                    <th>Patient</th>
-                    <th>Modality</th>
-                    <th>Study Date</th>
-                    <th>Priority</th>
-                    <th>Status</th>
+                    <th style={{width: '15%'}}>Study ID</th>
+                    <th style={{width: '15%'}}>Patient</th>
+                    <th style={{width: '10%'}}>Modality</th>
+                    <th style={{width: '23%'}}>Study Date</th>
+                    <th style={{width: '12%'}}>Priority</th>
+                    <th style={{width: '12%'}}>Status</th>
+                    <th style={{width: '13%'}}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan="6" style={{textAlign: 'center', padding: '24px'}}>Loading studies...</td>
+                      <td colSpan="7" style={{textAlign: 'center', padding: '24px'}}>Loading studies...</td>
                     </tr>
                   ) : studies.length > 0 ? (
                     studies.map((study) => {
@@ -235,7 +273,7 @@ const UploadDicom = () => {
                       const statusClass = getBadgeClass(study.status)
                       const statusText = (study.status || 'pending').charAt(0).toUpperCase() + (study.status || 'pending').slice(1)
                       
-                      const studyDate = study.created_at ? new Date(study.created_at).toLocaleDateString() : 'N/A'
+                      const studyDate = study.created_at ? new Date(study.created_at).toLocaleString() : 'N/A'
                       
                       // Count DICOM files
                       const fileCount = study.dicom_files ? study.dicom_files.length : 0
@@ -244,12 +282,11 @@ const UploadDicom = () => {
                       return (
                         <tr 
                           key={study.id}
-                          onClick={() => window.location.href = `/studies/${study.id}`}
                           style={{cursor: 'pointer'}}
                         >
-                          <td data-label="Study ID">{study.study_id || 'N/A'}</td>
-                          <td data-label="Patient">{patientName}</td>
-                          <td data-label="Modality">
+                          <td data-label="Study ID" onClick={() => window.location.href = `/studies/${study.id}`}>{study.study_id || 'N/A'}</td>
+                          <td data-label="Patient" onClick={() => window.location.href = `/studies/${study.id}`}>{patientName}</td>
+                          <td data-label="Modality" onClick={() => window.location.href = `/studies/${study.id}`}>
                             {fileCount > 0 ? (
                               <span style={{color: 'var(--ink)'}}>
                                 {fileCount} {fileText}
@@ -258,19 +295,47 @@ const UploadDicom = () => {
                               <span style={{color: 'var(--muted)'}}>No files</span>
                             )}
                           </td>
-                          <td data-label="Study Date">{studyDate}</td>
-                          <td data-label="Priority">
+                          <td data-label="Study Date" onClick={() => window.location.href = `/studies/${study.id}`}>{studyDate}</td>
+                          <td data-label="Priority" onClick={() => window.location.href = `/studies/${study.id}`}>
                             <span className={`badge ${priorityClass}`}>{priorityText}</span>
                           </td>
-                          <td data-label="Status">
+                          <td data-label="Status" onClick={() => window.location.href = `/studies/${study.id}`}>
                             <span className={`badge ${statusClass}`}>{statusText}</span>
+                          </td>
+                          <td data-label="" style={{textAlign: 'right', paddingRight: '48px'}}>
+                            <button
+                              onClick={(e) => handleDeleteClick(e, study)}
+                              style={{
+                                background: '#fee2e2',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#ef4444',
+                                padding: '8px 16px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'background 0.2s',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                borderRadius: '20px',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
+                              title="Delete study"
+                            >
+                              <Trash2 size={16} />
+                              DELETE
+                            </button>
                           </td>
                         </tr>
                       )
                     })
                   ) : (
                     <tr>
-                      <td colSpan="6" style={{textAlign: 'center', padding: '24px'}}>
+                      <td colSpan="7" style={{textAlign: 'center', padding: '24px'}}>
                         No studies found. Click + to upload DICOM files.
                       </td>
                     </tr>
@@ -281,6 +346,63 @@ const UploadDicom = () => {
           </div>
         </article>
       </section>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="modal" style={{display: 'flex', padding: '130px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '500px', margin: 'auto'}}>
+            <div className="modal-header">
+              <div>
+                <h2>Delete Study</h2>
+                <p className="modal-subtitle">Are you sure you want to delete this study?</p>
+              </div>
+              <button className="close-btn" onClick={cancelDelete}>&times;</button>
+            </div>
+            <div className="modal-body">
+              {studyToDelete && (
+                <div style={{marginBottom: '20px'}}>
+                  <p style={{marginBottom: '8px'}}><strong>Study ID:</strong> {studyToDelete.study_id}</p>
+                  <p style={{marginBottom: '8px'}}><strong>Patient:</strong> {studyToDelete.patients ? `${studyToDelete.patients.first_name} ${studyToDelete.patients.last_name}` : 'Unknown'}</p>
+                  <p style={{color: 'var(--error)', marginTop: '16px', fontSize: '14px'}}>
+                    ⚠️ This action cannot be undone. All DICOM files associated with this study will be permanently deleted.
+                  </p>
+                </div>
+              )}
+              <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+                <button 
+                  onClick={cancelDelete}
+                  style={{
+                    padding: '10px 20px',
+                    border: '1px solid var(--line)',
+                    background: 'white',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  disabled={loading}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    background: 'var(--error)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                >
+                  {loading ? 'Deleting...' : 'Delete Study'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload DICOM Modal */}
       {showModal && (

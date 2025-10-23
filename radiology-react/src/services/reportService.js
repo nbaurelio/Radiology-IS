@@ -246,5 +246,21 @@ export const reportService = {
     }
     
     return chars.join('')
+  },
+
+  async deleteReport(reportId) {
+    try {
+      const { error } = await supabase
+        .from('reports')
+        .delete()
+        .eq('id', reportId)
+
+      if (error) throw error
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Delete report error:', error)
+      return { success: false, message: error.message }
+    }
   }
 }

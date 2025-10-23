@@ -33,9 +33,11 @@ const PatientDetail = () => {
 
   const handleEditInfo = () => {
     setIsEditMode(true)
+    // Extract number part from MRN if it exists
+    const mrnNumber = patient.mrn ? patient.mrn.replace('MRN-', '') : ''
     setEditData({
       patient_id: patient.patient_id || '',
-      mrn: patient.mrn || '',
+      mrn: mrnNumber,
       first_name: patient.first_name || '',
       last_name: patient.last_name || '',
       date_of_birth: patient.date_of_birth || '',
@@ -56,7 +58,12 @@ const PatientDetail = () => {
     e.preventDefault()
     
     try {
-      const result = await patientService.updatePatient(id, editData)
+      // Add MRN- prefix when saving
+      const dataToSave = {
+        ...editData,
+        mrn: editData.mrn ? `MRN-${editData.mrn}` : null
+      }
+      const result = await patientService.updatePatient(id, dataToSave)
       
       if (result.success) {
         alert('Patient information updated successfully!')
@@ -74,10 +81,19 @@ const PatientDetail = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setEditData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    // Only allow numbers for MRN and phone
+    if (name === 'mrn' || name === 'phone') {
+      const numericValue = value.replace(/[^0-9]/g, '')
+      setEditData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }))
+    } else {
+      setEditData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
   }
 
   if (loading) {
@@ -131,26 +147,28 @@ const PatientDetail = () => {
         >
           ← Back to Patients
         </Link>
-        <button 
-          onClick={handleEditInfo}
-          style={{
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '8px 12px', 
-            border: '1px solid var(--card-border)', 
-            borderRadius: 'var(--radius)', 
-            background: 'var(--panel)', 
-            color: 'var(--ink)', 
-            cursor: 'pointer', 
-            transition: 'border-color 0.2s ease', 
-            fontFamily: 'inherit', 
-            fontSize: '14px'
-          }}
-        >
-          <span className="material-icons" style={{fontSize: '21px', color: 'var(--muted)'}}>edit</span>
-          Edit Info
-        </button>
+        {!isEditMode && (
+          <button 
+            onClick={handleEditInfo}
+            style={{
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '8px 12px', 
+              border: '1px solid var(--card-border)', 
+              borderRadius: 'var(--radius)', 
+              background: 'var(--panel)', 
+              color: 'var(--ink)', 
+              cursor: 'pointer', 
+              transition: 'border-color 0.2s ease', 
+              fontFamily: 'inherit', 
+              fontSize: '14px'
+            }}
+          >
+            <span className="material-icons" style={{fontSize: '21px', color: 'var(--muted)'}}>edit</span>
+            Edit Info
+          </button>
+        )}
       </div>
 
       <section className="grid">
@@ -178,15 +196,27 @@ const PatientDetail = () => {
                       </tr>
                       <tr style={{borderBottom: '1px solid var(--line)'}}>
                         <td style={{padding: '12px', fontWeight: 600}}>Medical Record Number (MRN)</td>
-                        <td style={{padding: '12px'}}>
-                          <input 
-                            type="text" 
-                            name="mrn"
-                            value={editData.mrn}
-                            onChange={handleInputChange}
-                            className="form-input"
-                            style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px', background: 'var(--panel)', color: 'var(--ink)'}}
-                          />
+                        <td style={{padding: '12px', position: 'relative'}}>
+                          <div style={{position: 'relative', display: 'inline-block', width: '100%'}}>
+                            <span style={{
+                              position: 'absolute',
+                              left: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              color: 'var(--ink)',
+                              pointerEvents: 'none',
+                              zIndex: 1
+                            }}>MRN-</span>
+                            <input 
+                              type="text" 
+                              name="mrn"
+                              value={editData.mrn}
+                              onChange={handleInputChange}
+                              placeholder="12345"
+                              className="form-input"
+                              style={{width: '100%', padding: '8px 12px 8px 55px', border: '1px solid var(--card-border)', borderRadius: '6px', background: 'var(--panel)', color: 'var(--ink)'}}
+                            />
+                          </div>
                         </td>
                       </tr>
                       <tr style={{borderBottom: '1px solid var(--line)'}}>
@@ -338,7 +368,7 @@ const PatientDetail = () => {
                     </tr>
                     <tr style={{borderBottom: '1px solid var(--line)'}}>
                       <td style={{padding: '12px', fontWeight: 600}}>Medical Record Number (MRN)</td>
-                      <td style={{padding: '12px'}}>{patient.mrn || 'N/A'}</td>
+                      <td style={{padding: '12px', fontFamily: 'inherit', letterSpacing: 'normal'}}>{patient.mrn || 'N/A'}</td>
                     </tr>
                     <tr style={{borderBottom: '1px solid var(--line)'}}>
                       <td style={{padding: '12px', fontWeight: 600}}>Full Name</td>

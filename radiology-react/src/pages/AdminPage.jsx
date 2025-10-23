@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { AlertCircle, Trash2, Users, FileText, Database } from 'lucide-react'
+import { AlertCircle, Trash2, Users, FileText, Database, Eye, EyeOff } from 'lucide-react'
 
 const AdminPage = () => {
   const { user } = useAuth()
@@ -17,6 +17,17 @@ const AdminPage = () => {
   const [newUserCredentials, setNewUserCredentials] = useState(null)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
+  const [userToDelete, setUserToDelete] = useState(null)
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [employeeNumber, setEmployeeNumber] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [showUserDetailModal, setShowUserDetailModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [isEditingUser, setIsEditingUser] = useState(false)
+  const [editUserData, setEditUserData] = useState(null)
 
   // Redirect if not admin
   if (!user || (user.userType !== 'Hospital Admin' && user.userType !== 'Administrator')) {
@@ -33,6 +44,95 @@ const AdminPage = () => {
     loadUsers()
   }, [])
 
+  const handleDeleteUser = (userId) => {
+    setUserToDelete(userId)
+    setDeleteConfirmModal(true)
+  }
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return
+
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('user_id', userToDelete)
+
+      if (error) throw error
+
+      showMessage('success', 'User deleted successfully')
+      await loadUsers()
+    } catch (error) {
+      console.error('Delete user error:', error)
+      showMessage('error', `Failed to delete user: ${error.message}`)
+    } finally {
+      setLoading(false)
+      setDeleteConfirmModal(false)
+      setUserToDelete(null)
+    }
+  }
+
+  const cancelDeleteUser = () => {
+    setDeleteConfirmModal(false)
+    setUserToDelete(null)
+  }
+
+  const handleUserClick = (account) => {
+    setSelectedUser(account)
+    setShowUserDetailModal(true)
+    setIsEditingUser(false)
+  }
+
+  const handleEditUser = () => {
+    setEditUserData({
+      firstName: selectedUser.name.split(' ')[0],
+      lastName: selectedUser.name.split(' ').slice(1).join(' '),
+      email: selectedUser.email,
+      employeeNumber: selectedUser.employeeNumber === 'N/A' ? '' : selectedUser.employeeNumber,
+      role: selectedUser.role
+    })
+    setIsEditingUser(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditingUser(false)
+    setEditUserData(null)
+  }
+
+  const handleSaveUserEdit = async () => {
+    setLoading(true)
+    try {
+      // Map role to user_type_id
+      const userTypeId = editUserData.role === 'Administrator' ? 1 :
+                        editUserData.role === 'Radiologist' ? 2 : 3
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          first_name: editUserData.firstName,
+          last_name: editUserData.lastName,
+          email: editUserData.email,
+          employee_number: editUserData.employeeNumber || null,
+          user_type_id: userTypeId
+        })
+        .eq('user_id', selectedUser.userId)
+
+      if (error) throw error
+
+      showMessage('success', 'User information updated successfully')
+      await loadUsers()
+      setIsEditingUser(false)
+      setShowUserDetailModal(false)
+      setEditUserData(null)
+    } catch (error) {
+      console.error('Update user error:', error)
+      showMessage('error', `Failed to update user: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const loadUsers = async () => {
     try {
       const { data, error } = await supabase
@@ -44,7 +144,9 @@ const AdminPage = () => {
           email,
           is_active,
           created_at,
-          user_type_id
+          user_type_id,
+          employee_number,
+          plain_password
         `)
         .order('created_at', { ascending: false })
 
@@ -62,7 +164,8 @@ const AdminPage = () => {
         name: `${user.first_name} ${user.last_name}`,
         role: userTypeMap[user.user_type_id] || 'Unknown',
         email: user.email,
-        password: '••••••••',
+        employeeNumber: user.employee_number || 'N/A',
+        password: user.plain_password || 'N/A',
         status: user.is_active ? 'Active' : 'Inactive',
         created: new Date(user.created_at).toLocaleDateString()
       }))
@@ -142,7 +245,9 @@ const AdminPage = () => {
           last_name: lastName,
           password_hash: passwordHash,
           user_type_id: userTypeId,
-          is_active: true
+          is_active: true,
+          employee_number: employeeNumber,
+          plain_password: password
         })
       
       if (userError) throw userError
@@ -155,6 +260,7 @@ const AdminPage = () => {
         password
       })
       setShowSuccessModal(true)
+      setShowAddAccountModal(false)
       
       // Reload users list
       await loadUsers()
@@ -164,6 +270,8 @@ const AdminPage = () => {
       setFirstName('')
       setLastName('')
       setEmail('')
+      setEmployeeNumber('')
+      setDateOfBirth('')
     } catch (error) {
       console.error('Generate account error:', error)
       
@@ -391,69 +499,65 @@ const AdminPage = () => {
   return (
     <section className="grid">
       {message.text && (
-        <div className={`alert ${message.type === 'success' ? 'alert-success' : 'alert-error'}`}>
-          <AlertCircle size={20} />
-          <span>{message.text}</span>
+        <div style={{
+          position: 'fixed',
+          top: '100px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          minWidth: '300px',
+          padding: '14px 20px',
+          background: message.type === 'success' ? '#d1fae5' : '#fee2e2',
+          border: `1px solid ${message.type === 'success' ? '#6ee7b7' : '#fca5a5'}`,
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          animation: 'slideDown 0.3s ease-out'
+        }}>
+          <AlertCircle size={20} color={message.type === 'success' ? '#059669' : '#dc2626'} />
+          <span style={{
+            color: message.type === 'success' ? '#065f46' : '#991b1b',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}>{message.text}</span>
         </div>
       )}
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
 
       {/* Account Generation Section */}
       <article className="card table-card">
         <div className="hd">Account Generation</div>
         <div className="bd" style={{ padding: '20px' }}>
-          <form onSubmit={handleGenerateAccount} style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            <select 
-              className="form-select" 
-              style={{ flex: '1', minWidth: '200px' }}
-              value={userRole}
-              onChange={(e) => setUserRole(e.target.value)}
-              required
-            >
-              <option value="">Select User Role</option>
-              <option value="Radiologist">Radiologist</option>
-              <option value="Rad Tech">Rad Tech</option>
-              <option value="Hospital Admin">Hospital Admin</option>
-            </select>
-            
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center' }}>
             <input 
               type="text" 
               className="form-input" 
-              placeholder="First Name"
-              style={{ flex: '1', minWidth: '150px' }}
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
+              placeholder="Search users by name, email, or role..."
+              style={{ flex: '1' }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="Last Name"
-              style={{ flex: '1', minWidth: '150px' }}
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-            />
-            
-            <input 
-              type="email" 
-              className="form-input" 
-              placeholder="Email Address"
-              style={{ flex: '1', minWidth: '200px' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            
             <button 
-              type="submit"
+              onClick={() => setShowAddAccountModal(true)}
               className="btn-primary" 
-              disabled={loading}
               style={{ padding: '8px 20px', whiteSpace: 'nowrap' }}
             >
-              {loading ? 'Generating...' : 'Generate Account'}
+              Add Account
             </button>
-          </form>
+          </div>
           
           <div className="table-wrap">
             <table className="tbl">
@@ -463,28 +567,64 @@ const AdminPage = () => {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Email</th>
-                  <th>Password</th>
+                  <th>Employee Number</th>
                   <th>Status</th>
                   <th>Created</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {generatedAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
                       No accounts generated yet. Use the form above to create new user accounts.
                     </td>
                   </tr>
                 ) : (
-                  generatedAccounts.map((account, index) => (
-                    <tr key={index}>
+                  generatedAccounts
+                    .filter(account => {
+                      if (!searchTerm) return true
+                      const search = searchTerm.toLowerCase()
+                      return (
+                        account.name.toLowerCase().includes(search) ||
+                        account.email.toLowerCase().includes(search) ||
+                        account.role.toLowerCase().includes(search) ||
+                        account.userId.toLowerCase().includes(search)
+                      )
+                    })
+                    .map((account, index) => (
+                    <tr key={index} onClick={() => handleUserClick(account)} style={{cursor: 'pointer'}}>
                       <td>{account.userId}</td>
                       <td>{account.name}</td>
                       <td>{account.role}</td>
                       <td>{account.email}</td>
-                      <td><code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px' }}>{account.password}</code></td>
+                      <td>{account.employeeNumber || 'N/A'}</td>
                       <td><span className="badge badge-done">{account.status}</span></td>
                       <td>{account.created}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteUser(account.userId)
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#ef4444',
+                            padding: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'opacity 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                          title="Delete user"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -680,6 +820,459 @@ const AdminPage = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Account Modal */}
+      {showAddAccountModal && (
+        <div className="modal" style={{display: 'flex', padding: '120px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '550px', margin: 'auto'}}>
+            <div className="modal-header">
+              <div>
+                <h2>Add New Account</h2>
+                <p className="modal-subtitle">Create a new user account</p>
+              </div>
+              <button className="close-btn" onClick={() => {
+                setShowAddAccountModal(false)
+                setUserRole('')
+                setFirstName('')
+                setLastName('')
+                setEmail('')
+                setEmployeeNumber('')
+                setDateOfBirth('')
+              }}>&times;</button>
+            </div>
+            <div className="modal-body" style={{padding: '20px'}}>
+              <form onSubmit={handleGenerateAccount}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '14px'}}>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px'}}>
+                      User Role <span style={{color: 'var(--error)'}}>*</span>
+                    </label>
+                    <select 
+                      className="form-select" 
+                      style={{width: '100%'}}
+                      value={userRole}
+                      onChange={(e) => setUserRole(e.target.value)}
+                      required
+                    >
+                      <option value="">Select User Role</option>
+                      <option value="Radiologist">Radiologist</option>
+                      <option value="Rad Tech">Rad Tech</option>
+                      <option value="Hospital Admin">Hospital Admin</option>
+                    </select>
+                  </div>
+
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                    <div>
+                      <label style={{display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px'}}>
+                        First Name <span style={{color: 'var(--error)'}}>*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="First Name"
+                        style={{width: '100%'}}
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px'}}>
+                        Last Name <span style={{color: 'var(--error)'}}>*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="Last Name"
+                        style={{width: '100%'}}
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px'}}>
+                      Email Address <span style={{color: 'var(--error)'}}>*</span>
+                    </label>
+                    <input 
+                      type="email" 
+                      className="form-input" 
+                      placeholder="Email Address"
+                      style={{width: '100%'}}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px'}}>
+                      Employee Number <span style={{color: 'var(--error)'}}>*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Employee Number"
+                      style={{width: '100%'}}
+                      value={employeeNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '')
+                        setEmployeeNumber(value)
+                      }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px'}}>
+                      Date of Birth <span style={{color: 'var(--error)'}}>*</span>
+                    </label>
+                    <input 
+                      type="date" 
+                      className="form-input" 
+                      style={{width: '100%'}}
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      required
+                    />
+                    <small style={{color: 'var(--muted)', fontSize: '11px', marginTop: '2px', display: 'block'}}>
+                      Format: MM/DD/YYYY
+                    </small>
+                  </div>
+                </div>
+
+                <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px'}}>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setShowAddAccountModal(false)
+                      setUserRole('')
+                      setFirstName('')
+                      setLastName('')
+                      setEmail('')
+                      setEmployeeNumber('')
+                      setDateOfBirth('')
+                    }}
+                    style={{
+                      padding: '10px 20px',
+                      border: '1px solid var(--line)',
+                      background: 'white',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      background: 'var(--brand)',
+                      color: 'white',
+                      borderRadius: '8px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      opacity: loading ? 0.6 : 1
+                    }}
+                  >
+                    {loading ? 'Creating Account...' : 'Create Account'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="modal" style={{display: 'flex', padding: '150px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '450px', margin: 'auto'}}>
+            <div className="modal-header">
+              <div>
+                <h2>Delete User</h2>
+              </div>
+              <button className="close-btn" onClick={cancelDeleteUser}>&times;</button>
+            </div>
+            <div className="modal-body" style={{padding: '20px'}}>
+              <p style={{margin: '0 0 20px 0', fontSize: '14px', color: 'var(--ink)', lineHeight: '1.6'}}>
+                Are you sure you want to delete this user? This action cannot be undone.
+              </p>
+              <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+                <button 
+                  onClick={cancelDeleteUser}
+                  style={{
+                    padding: '10px 20px',
+                    border: '1px solid var(--line)',
+                    background: 'white',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDeleteUser}
+                  disabled={loading}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    background: '#3b82f6',
+                    color: 'white',
+                    borderRadius: '8px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Detail Modal */}
+      {showUserDetailModal && selectedUser && (
+        <div className="modal" style={{display: 'flex', padding: '120px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '600px', margin: 'auto'}}>
+            <div className="modal-header">
+              <div>
+                <h2>User Information</h2>
+                <p className="modal-subtitle">Detailed account information</p>
+              </div>
+              <button className="close-btn" onClick={() => {
+                setShowUserDetailModal(false)
+                setShowPassword(false)
+              }}>&times;</button>
+            </div>
+            <div className="modal-body" style={{padding: '24px'}}>
+              {!isEditingUser ? (
+                <>
+                <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                  <tbody>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600, width: '35%', color: 'var(--muted)'}}>User ID</td>
+                      <td style={{padding: '12px', color: 'var(--ink)'}}>{selectedUser.userId}</td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600, color: 'var(--muted)'}}>Full Name</td>
+                      <td style={{padding: '12px', color: 'var(--ink)'}}>{selectedUser.name}</td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600, color: 'var(--muted)'}}>Role</td>
+                      <td style={{padding: '12px', color: 'var(--ink)'}}>{selectedUser.role}</td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600, color: 'var(--muted)'}}>Email Address</td>
+                      <td style={{padding: '12px', color: 'var(--ink)'}}>{selectedUser.email}</td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid var(--line)'}}>
+                      <td style={{padding: '12px', fontWeight: 600, color: 'var(--muted)'}}>Employee Number</td>
+                      <td style={{padding: '12px', color: 'var(--ink)'}}>{selectedUser.employeeNumber || 'N/A'}</td>
+                    </tr>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600, color: 'var(--muted)'}}>Password</td>
+                    <td style={{padding: '12px'}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        <code style={{ background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px', fontSize: '13px', flex: 1 }}>
+                          {showPassword ? (selectedUser.password || 'N/A') : '••••••••'}
+                        </code>
+                        <button
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: 'var(--muted)'
+                          }}
+                          title={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600, color: 'var(--muted)'}}>Status</td>
+                    <td style={{padding: '12px'}}>
+                      <span className="badge badge-done">{selectedUser.status}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{padding: '12px', fontWeight: 600, color: 'var(--muted)'}}>Created Date</td>
+                    <td style={{padding: '12px', color: 'var(--ink)'}}>{selectedUser.created}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style={{marginTop: '24px', display: 'flex', justifyContent: 'space-between'}}>
+                <button 
+                  onClick={handleEditUser}
+                  style={{
+                    padding: '10px 24px',
+                    border: '1px solid var(--brand)',
+                    background: 'white',
+                    color: 'var(--brand)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Edit
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowUserDetailModal(false)
+                    setShowPassword(false)
+                  }}
+                  style={{
+                    padding: '10px 24px',
+                    border: 'none',
+                    background: 'var(--brand)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              </>
+            ) : (
+                <div>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                    <div>
+                      <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                        User ID
+                      </label>
+                      <input 
+                        type="text"
+                        value={selectedUser.userId}
+                        disabled
+                        style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px', background: '#f3f4f6', color: 'var(--muted)', cursor: 'not-allowed'}}
+                      />
+                    </div>
+
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                      <div>
+                        <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                          First Name
+                        </label>
+                        <input 
+                          type="text"
+                          value={editUserData.firstName}
+                          onChange={(e) => setEditUserData({...editUserData, firstName: e.target.value})}
+                          style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px', background: 'var(--panel)', color: 'var(--ink)'}}
+                        />
+                      </div>
+                      <div>
+                        <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                          Last Name
+                        </label>
+                        <input 
+                          type="text"
+                          value={editUserData.lastName}
+                          onChange={(e) => setEditUserData({...editUserData, lastName: e.target.value})}
+                          style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px', background: 'var(--panel)', color: 'var(--ink)'}}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                        Role
+                      </label>
+                      <select 
+                        value={editUserData.role}
+                        onChange={(e) => setEditUserData({...editUserData, role: e.target.value})}
+                        style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px', background: 'var(--panel)', color: 'var(--ink)'}}
+                      >
+                        <option value="Radiologist">Radiologist</option>
+                        <option value="Rad Tech">Rad Tech</option>
+                        <option value="Administrator">Administrator</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                        Email Address
+                      </label>
+                      <input 
+                        type="email"
+                        value={editUserData.email}
+                        onChange={(e) => setEditUserData({...editUserData, email: e.target.value})}
+                        style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px', background: 'var(--panel)', color: 'var(--ink)'}}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                        Employee Number
+                      </label>
+                      <input 
+                        type="text"
+                        value={editUserData.employeeNumber}
+                        onChange={(e) => setEditUserData({...editUserData, employeeNumber: e.target.value})}
+                        style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px', background: 'var(--panel)', color: 'var(--ink)'}}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+                    <button 
+                      onClick={handleCancelEdit}
+                      style={{
+                        padding: '10px 20px',
+                        border: '1px solid var(--line)',
+                        background: 'white',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleSaveUserEdit}
+                      disabled={loading}
+                      style={{
+                        padding: '10px 20px',
+                        border: 'none',
+                        background: 'var(--brand)',
+                        color: 'white',
+                        borderRadius: '8px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        opacity: loading ? 0.6 : 1
+                      }}
+                    >
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

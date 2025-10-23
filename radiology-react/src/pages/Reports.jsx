@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
 import { reportService } from '../services/reportService'
 import { studyService } from '../services/studyService'
 
@@ -10,6 +11,8 @@ const Reports = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [searchTimeout, setSearchTimeout] = useState(null)
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
+  const [reportToDelete, setReportToDelete] = useState(null)
 
   useEffect(() => {
     loadPendingStudies()
@@ -79,6 +82,40 @@ const Reports = () => {
            priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine'
   }
 
+  const handleDeleteClick = (e, report) => {
+    e.stopPropagation()
+    setReportToDelete(report)
+    setDeleteConfirmModal(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!reportToDelete) return
+    
+    setLoading(true)
+    try {
+      const result = await reportService.deleteReport(reportToDelete.id)
+      
+      if (result.success) {
+        alert('Report deleted successfully')
+        await loadReports()
+      } else {
+        alert(`Error deleting report: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('An error occurred while deleting the report')
+    } finally {
+      setLoading(false)
+      setDeleteConfirmModal(false)
+      setReportToDelete(null)
+    }
+  }
+
+  const cancelDelete = () => {
+    setDeleteConfirmModal(false)
+    setReportToDelete(null)
+  }
+
   return (
     <section className="grid">
       {/* Search Bar */}
@@ -92,6 +129,13 @@ const Reports = () => {
             placeholder="Search reports by patient, study, or radiologist..." 
           />
         </div>
+        <button 
+          className="add-patient-btn" 
+          onClick={() => navigate('/reports/add')}
+          aria-label="Add Report"
+        >
+          <span className="plus-icon">+</span>
+        </button>
       </article>
 
       {/* Pending Studies Section */}
@@ -105,12 +149,12 @@ const Reports = () => {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Study ID</th>
-                  <th>Patient</th>
-                  <th>Files</th>
-                  <th>Upload Date</th>
-                  <th>Priority</th>
-                  <th>Clinical History</th>
+                  <th style={{width: '15%'}}>Study ID</th>
+                  <th style={{width: '15%'}}>Patient</th>
+                  <th style={{width: '10%'}}>Files</th>
+                  <th style={{width: '23%'}}>Upload Date</th>
+                  <th style={{width: '12%'}}>Priority</th>
+                  <th style={{width: '25%'}}>Clinical History</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,7 +168,7 @@ const Reports = () => {
                     const priorityText = study.priority === 'stat' ? 'STAT' : 
                                        (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1)
                     
-                    const uploadDate = study.created_at ? new Date(study.created_at).toLocaleDateString() : 'N/A'
+                    const uploadDate = study.created_at ? new Date(study.created_at).toLocaleString() : 'N/A'
                     const fileCount = study.dicom_files ? study.dicom_files.length : 0
                     const fileText = fileCount === 1 ? 'file' : 'files'
                     const clinicalHistory = study.clinical_history || 'None provided'
@@ -175,19 +219,20 @@ const Reports = () => {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Study ID</th>
-                  <th>Patient</th>
-                  <th>Exam Type</th>
-                  <th>Appointment Date</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Notes</th>
+                  <th style={{width: '13%'}}>Study ID</th>
+                  <th style={{width: '13%'}}>Patient</th>
+                  <th style={{width: '10%'}}>Exam Type</th>
+                  <th style={{width: '20%'}}>Appointment Date</th>
+                  <th style={{width: '10%'}}>Priority</th>
+                  <th style={{width: '10%'}}>Status</th>
+                  <th style={{width: '12%'}}>Notes</th>
+                  <th style={{width: '12%'}}></th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="7" style={{textAlign: 'center', padding: '24px'}}>Loading reports...</td>
+                    <td colSpan="8" style={{textAlign: 'center', padding: '24px'}}>Loading reports...</td>
                   </tr>
                 ) : reports.length > 0 ? (
                   reports.map((report) => {
@@ -208,9 +253,11 @@ const Reports = () => {
                     const dateToUse = report.study_date || report.schedule
                     if (dateToUse) {
                       const date = new Date(dateToUse)
-                      const datePart = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                      const timePart = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                      dateStr = `${datePart} ${timePart}`
+                      const month = String(date.getMonth() + 1).padStart(2, '0')
+                      const day = String(date.getDate()).padStart(2, '0')
+                      const year = date.getFullYear()
+                      const timePart = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                      dateStr = `${month}/${day}/${year}, ${timePart}`
                     }
 
                     return (
@@ -230,12 +277,40 @@ const Reports = () => {
                           <span className={`badge ${statusClass}`}>{statusText}</span>
                         </td>
                         <td data-label="Notes">{report.notes || '-'}</td>
+                        <td data-label="" style={{textAlign: 'right', paddingRight: '48px'}}>
+                          <button
+                            onClick={(e) => handleDeleteClick(e, report)}
+                            style={{
+                              background: '#fee2e2',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: '#ef4444',
+                              padding: '8px 16px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              transition: 'background 0.2s',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              borderRadius: '20px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
+                            title="Delete report"
+                          >
+                            <Trash2 size={16} />
+                            DELETE
+                          </button>
+                        </td>
                       </tr>
                     )
                   })
                 ) : (
                   <tr>
-                    <td colSpan="7" style={{textAlign: 'center', padding: '24px'}}>
+                    <td colSpan="8" style={{textAlign: 'center', padding: '24px'}}>
                       {searchTerm 
                         ? 'No reports found matching your search.'
                         : 'No reports found. Click + to add a new report.'
@@ -248,6 +323,64 @@ const Reports = () => {
           </div>
         </div>
       </article>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="modal" style={{display: 'flex', padding: '130px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '500px', margin: 'auto'}}>
+            <div className="modal-header">
+              <div>
+                <h2>Delete Report</h2>
+                <p className="modal-subtitle">Are you sure you want to delete this report?</p>
+              </div>
+              <button className="close-btn" onClick={cancelDelete}>&times;</button>
+            </div>
+            <div className="modal-body">
+              {reportToDelete && (
+                <div style={{marginBottom: '20px'}}>
+                  <p style={{marginBottom: '8px'}}><strong>Study ID:</strong> {reportToDelete.study_id || 'N/A'}</p>
+                  <p style={{marginBottom: '8px'}}><strong>Patient:</strong> {reportToDelete.patients ? `${reportToDelete.patients.first_name} ${reportToDelete.patients.last_name}` : reportToDelete.name || 'Unknown'}</p>
+                  <p style={{marginBottom: '8px'}}><strong>Exam Type:</strong> {reportToDelete.exam_type || 'N/A'}</p>
+                  <p style={{color: 'var(--error)', marginTop: '16px', fontSize: '14px'}}>
+                    ⚠️ This action cannot be undone. The report will be permanently deleted.
+                  </p>
+                </div>
+              )}
+              <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+                <button 
+                  onClick={cancelDelete}
+                  style={{
+                    padding: '10px 20px',
+                    border: '1px solid var(--line)',
+                    background: 'white',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  disabled={loading}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    background: 'var(--error)',
+                    color: 'white',
+                    borderRadius: '8px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                >
+                  {loading ? 'Deleting...' : 'Delete Report'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
