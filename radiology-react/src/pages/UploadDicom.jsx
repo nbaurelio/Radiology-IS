@@ -135,7 +135,18 @@ const UploadDicom = () => {
       const result = await studyService.createStudy(studyData)
       
       if (result.success) {
-        alert(`Study uploaded successfully!\nStudy ID: ${result.study.study_id}\nFiles: ${selectedFiles.length}`)
+        // Upload files to storage and save records
+        const uploadResult = await studyService.uploadDicomFiles(
+          result.study.id,
+          result.study.study_id,
+          selectedFiles
+        )
+        
+        if (uploadResult.success) {
+          alert(`Study uploaded successfully!\nStudy ID: ${result.study.study_id}\nFiles: ${uploadResult.uploadedCount}/${selectedFiles.length}`)
+        } else {
+          alert(`Study created but file upload had issues:\n${uploadResult.message}`)
+        }
         
         // Reset form and close modal
         setShowModal(false)

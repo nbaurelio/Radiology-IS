@@ -197,5 +197,76 @@ export const studyService = {
       const currentYear = new Date().getFullYear()
       return `STU-${currentYear}-0001`
     }
+  },
+
+  async uploadDicomFiles(studyUuid, studyId, files) {
+    try {
+      let uploadedCount = 0
+      const errors = []
+
+      for (const file of files) {
+        try {
+          // Create file path: studyId/filename
+          const filePath = `${studyId}/${file.name}`
+
+          // Upload to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('dicom-files')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+            })
+
+          if (uploadError) {
+            console.error(`Failed to upload ${file.name}:`, uploadError)
+            errors.push(`${file.name}: ${uploadError.message}`)
+            continue
+          }
+
+          // Save file record to database
+          const { error: dbError } = await supabase
+            .from('dicom_files')
+            .insert({
+              study_id: studyUuid,
+              file_name: file.name,
+              file_path: filePath,
+              file_size: file.size,
+              mime_type: file.type || 'application/octet-stream'
+            })
+
+          if (dbError) {
+            console.error(`Failed to save file record for ${file.name}:`, dbError)
+            errors.push(`${file.name}: Database error`)
+            continue
+          }
+
+          uploadedCount++
+        } catch (fileError) {
+          console.error(`Error processing ${file.name}:`, fileError)
+          errors.push(`${file.name}: ${fileError.message}`)
+        }
+      }
+
+      if (errors.length > 0) {
+        return {
+          success: false,
+          uploadedCount,
+          message: `Uploaded ${uploadedCount}/${files.length} files. Errors: ${errors.join(', ')}`
+        }
+      }
+
+      return {
+        success: true,
+        uploadedCount,
+        message: `Successfully uploaded ${uploadedCount} files`
+      }
+    } catch (error) {
+      console.error('Upload DICOM files error:', error)
+      return {
+        success: false,
+        uploadedCount: 0,
+        message: error.message
+      }
+    }
   }
 }
