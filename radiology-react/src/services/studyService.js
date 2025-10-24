@@ -46,11 +46,11 @@ export const studyService = {
           created_at,
           priority,
           status,
+          dicom_files,
           patients:patients!fk_patient (
             first_name,
             last_name
-          ),
-          dicom_files(id)
+          )
         `)
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -69,8 +69,7 @@ export const studyService = {
         .from('studies')
         .select(`
           *,
-          patients(id, patient_id, first_name, last_name),
-          dicom_files(id)
+          patients(id, patient_id, first_name, last_name)
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -89,8 +88,7 @@ export const studyService = {
         .from('studies')
         .select(`
           *,
-          patients(id, patient_id, first_name, last_name, date_of_birth, sex, phone, email),
-          dicom_files(id, file_name, file_path, file_size, mime_type, uploaded_at)
+          patients(id, patient_id, first_name, last_name, date_of_birth, sex, phone, email)
         `)
         .eq('id', studyId)
         .single()
@@ -207,6 +205,7 @@ export const studyService = {
     try {
       let uploadedCount = 0
       const errors = []
+      const fileRecords = []
 
       for (const file of files) {
         try {
@@ -227,27 +226,33 @@ export const studyService = {
             continue
           }
 
-          // Save file record to database
-          const { error: dbError } = await supabase
-            .from('dicom_files')
-            .insert({
-              study_id: studyUuid,
-              file_name: file.name,
-              file_path: filePath,
-              file_size: file.size,
-              mime_type: file.type || 'application/octet-stream'
-            })
-
-          if (dbError) {
-            console.error(`Failed to save file record for ${file.name}:`, dbError)
-            errors.push(`${file.name}: Database error`)
-            continue
-          }
+          // Store file metadata for JSONB update
+          fileRecords.push({
+            name: file.name,
+            path: filePath,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            file_type: 'dicom',
+            uploaded_at: new Date().toISOString()
+          })
 
           uploadedCount++
         } catch (fileError) {
           console.error(`Error processing ${file.name}:`, fileError)
           errors.push(`${file.name}: ${fileError.message}`)
+        }
+      }
+
+      // Update studies table with file metadata
+      if (fileRecords.length > 0) {
+        const { error: updateError } = await supabase
+          .from('studies')
+          .update({ dicom_files: fileRecords })
+          .eq('id', studyUuid)
+
+        if (updateError) {
+          console.error('Failed to update studies table:', updateError)
+          errors.push(`Database update error: ${updateError.message}`)
         }
       }
 
@@ -276,19 +281,20 @@ export const studyService = {
 
   async deleteStudy(studyId, studyIdString) {
     try {
-      // First, get all DICOM files associated with this study
-      const { data: dicomFiles, error: filesError } = await supabase
-        .from('dicom_files')
-        .select('file_path')
-        .eq('study_id', studyId)
+      // First, get the study and its files
+      const { data: study, error: studyError } = await supabase
+        .from('studies')
+        .select('dicom_files')
+        .eq('id', studyId)
+        .single()
 
-      if (filesError) {
-        console.error('Error fetching DICOM files:', filesError)
+      if (studyError) {
+        console.error('Error fetching study:', studyError)
       }
 
       // Delete files from storage if they exist
-      if (dicomFiles && dicomFiles.length > 0) {
-        const filePaths = dicomFiles.map(file => file.file_path)
+      if (study && study.dicom_files && study.dicom_files.length > 0) {
+        const filePaths = study.dicom_files.map(file => file.path)
         const { error: storageError } = await supabase.storage
           .from('dicom-files')
           .remove(filePaths)
@@ -298,17 +304,7 @@ export const studyService = {
         }
       }
 
-      // Delete DICOM file records from database
-      const { error: deleteFilesError } = await supabase
-        .from('dicom_files')
-        .delete()
-        .eq('study_id', studyId)
-
-      if (deleteFilesError) {
-        console.error('Error deleting DICOM file records:', deleteFilesError)
-      }
-
-      // Delete the study record
+      // Delete the study record (this will cascade delete related records)
       const { error: deleteStudyError } = await supabase
         .from('studies')
         .delete()
@@ -320,6 +316,99 @@ export const studyService = {
     } catch (error) {
       console.error('Delete study error:', error)
       return { success: false, message: error.message }
+    }
+  },
+
+  async uploadAdditionalFiles(studyUuid, studyId, files) {
+    try {
+      let uploadedCount = 0
+      const errors = []
+      const fileRecords = []
+
+      for (const file of files) {
+        try {
+          // Create file path: studyId/additional/filename
+          const filePath = `${studyId}/additional/${file.name}`
+
+          // Upload to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('dicom-files')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+            })
+
+          if (uploadError) {
+            console.error(`Failed to upload ${file.name}:`, uploadError)
+            errors.push(`${file.name}: ${uploadError.message}`)
+            continue
+          }
+
+          // Store file metadata for JSONB update
+          fileRecords.push({
+            name: file.name,
+            path: filePath,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            file_type: 'additional',
+            uploaded_at: new Date().toISOString()
+          })
+
+          uploadedCount++
+        } catch (fileError) {
+          console.error(`Error processing ${file.name}:`, fileError)
+          errors.push(`${file.name}: ${fileError.message}`)
+        }
+      }
+
+      // Get existing files and merge with new additional files
+      if (fileRecords.length > 0) {
+        const { data: existingStudy, error: fetchError } = await supabase
+          .from('studies')
+          .select('dicom_files')
+          .eq('id', studyUuid)
+          .single()
+
+        if (fetchError) {
+          console.error('Failed to fetch existing study:', fetchError)
+          errors.push(`Database fetch error: ${fetchError.message}`)
+        } else {
+          // Merge existing files with new additional files
+          const existingFiles = existingStudy.dicom_files || []
+          const allFiles = [...existingFiles, ...fileRecords]
+
+          const { error: updateError } = await supabase
+            .from('studies')
+            .update({ dicom_files: allFiles })
+            .eq('id', studyUuid)
+
+          if (updateError) {
+            console.error('Failed to update studies table:', updateError)
+            errors.push(`Database update error: ${updateError.message}`)
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        return {
+          success: false,
+          uploadedCount,
+          message: `Uploaded ${uploadedCount}/${files.length} additional files. Errors: ${errors.join(', ')}`
+        }
+      }
+
+      return {
+        success: true,
+        uploadedCount,
+        message: `Successfully uploaded ${uploadedCount} additional files`
+      }
+    } catch (error) {
+      console.error('Upload additional files error:', error)
+      return {
+        success: false,
+        uploadedCount: 0,
+        message: `Upload failed: ${error.message}`
+      }
     }
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { reportService } from '../services/reportService'
+import { studyService } from '../services/studyService'
 
 const ReportDetail = () => {
   const { id } = useParams()
@@ -420,6 +421,20 @@ const ReportDetail = () => {
           </div>
         </article>
 
+        {/* Associated Study Files */}
+        <article className="card" style={{gridColumn: '1 / -1'}}>
+          <div className="hd">Associated Study Files</div>
+          <div className="bd">
+            <div style={{padding: '20px'}}>
+              {report.study_id ? (
+                <StudyFilesSection studyId={report.study_id} />
+              ) : (
+                <p style={{color: 'var(--muted)'}}>No associated study found</p>
+              )}
+            </div>
+          </div>
+        </article>
+
         <article className="card" style={{gridColumn: '1 / -1'}}>
           <div className="hd">Report Content</div>
           <div className="bd">
@@ -521,6 +536,114 @@ const ReportDetail = () => {
           </div>
         </article>
       </section>
+    </div>
+  )
+}
+
+// Component to display study files
+const StudyFilesSection = ({ studyId }) => {
+  const [study, setStudy] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadStudy()
+  }, [studyId])
+
+  const loadStudy = async () => {
+    try {
+      const result = await studyService.getStudyById(studyId)
+      if (result.success) {
+        setStudy(result.study)
+      }
+    } catch (error) {
+      console.error('Error loading study:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return <p style={{color: 'var(--muted)'}}>Loading study files...</p>
+  }
+
+  if (!study) {
+    return <p style={{color: 'var(--muted)'}}>Study not found</p>
+  }
+
+  const dicomFiles = study.dicom_files?.filter(file => file.file_type === 'dicom' || !file.file_type) || []
+  const additionalFiles = study.dicom_files?.filter(file => file.file_type === 'additional') || []
+
+  return (
+    <div>
+      {/* DICOM Files */}
+      {dicomFiles.length > 0 && (
+        <div style={{marginBottom: '24px'}}>
+          <h4 style={{fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--ink)'}}>
+            DICOM Files ({dicomFiles.length})
+          </h4>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+            {dicomFiles.map((file, index) => {
+              const sizeInMB = (file.size || file.file_size) ? ((file.size || file.file_size) / (1024 * 1024)).toFixed(2) : '0.00'
+              const fileName = file.name || file.file_name || `DICOM File ${index + 1}`
+              const fileIcon = fileName.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
+              const uploadDate = (file.uploaded_at || file.upload_date) ? new Date(file.uploaded_at || file.upload_date).toLocaleString() : 'N/A'
+              
+              return (
+                <div key={fileName || index} className="file-item">
+                  <div className="file-item-info">
+                    <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
+                    <div style={{flex: 1, minWidth: 0}}>
+                      <div className="file-item-name">{fileName}</div>
+                      <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
+                    </div>
+                  </div>
+                  <div className="file-item-status">
+                    <span className="badge badge-done">Ready</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Files */}
+      {additionalFiles.length > 0 && (
+        <div>
+          <h4 style={{fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--ink)'}}>
+            Additional Files ({additionalFiles.length})
+          </h4>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+            {additionalFiles.map((file, index) => {
+              const sizeInMB = (file.size || file.file_size) ? ((file.size || file.file_size) / (1024 * 1024)).toFixed(2) : '0.00'
+              const fileName = file.name || file.file_name || `Additional File ${index + 1}`
+              const fileIcon = fileName.endsWith('.pdf') ? 'picture_as_pdf' :
+                             (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) ? 'image' :
+                             'insert_drive_file'
+              const uploadDate = (file.uploaded_at || file.upload_date) ? new Date(file.uploaded_at || file.upload_date).toLocaleString() : 'N/A'
+              
+              return (
+                <div key={fileName || index} className="file-item">
+                  <div className="file-item-info">
+                    <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
+                    <div style={{flex: 1, minWidth: 0}}>
+                      <div className="file-item-name">{fileName}</div>
+                      <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
+                    </div>
+                  </div>
+                  <div className="file-item-status">
+                    <span className="badge badge-done">Ready</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {dicomFiles.length === 0 && additionalFiles.length === 0 && (
+        <p style={{color: 'var(--muted)'}}>No files found for this study</p>
+      )}
     </div>
   )
 }

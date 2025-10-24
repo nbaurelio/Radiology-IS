@@ -10,6 +10,7 @@ const UploadDicom = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState([])
+  const [selectedAdditionalFiles, setSelectedAdditionalFiles] = useState([])
   const [selectedPatient, setSelectedPatient] = useState('')
   const [clinicalHistory, setClinicalHistory] = useState('')
   const [examPriority, setExamPriority] = useState('routine')
@@ -101,9 +102,11 @@ const UploadDicom = () => {
   }
 
   const handleFiles = (fileList) => {
-    const validFiles = []
+    const dicomFiles = []
+    const additionalFiles = []
     const maxSize = 2 * 1024 * 1024 * 1024 // 2GB
-    const validExtensions = ['.dcm', '.dicom', '.zip']
+    const dicomExtensions = ['.dcm', '.dicom', '.zip']
+    const additionalExtensions = ['.pdf', '.jpg', '.jpeg', '.png']
     
     for (let file of fileList) {
       // Check file size
@@ -112,25 +115,35 @@ const UploadDicom = () => {
         continue
       }
       
-      // Check file extension
+      // Check file extension and categorize
       const fileName = file.name.toLowerCase()
-      const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext))
+      const isDicomFile = dicomExtensions.some(ext => fileName.endsWith(ext))
+      const isAdditionalFile = additionalExtensions.some(ext => fileName.endsWith(ext))
       
-      if (!hasValidExtension) {
-        alert(`File "${file.name}" has invalid extension. Only .dcm, .dicom, and .zip files are supported.`)
+      if (isDicomFile) {
+        dicomFiles.push(file)
+      } else if (isAdditionalFile) {
+        additionalFiles.push(file)
+      } else {
+        alert(`File "${file.name}" has invalid extension. Only .dcm, .dicom, .zip, .pdf, .jpg, .jpeg, and .png files are supported.`)
         continue
       }
-      
-      validFiles.push(file)
     }
     
-    if (validFiles.length > 0) {
-      setSelectedFiles([...selectedFiles, ...validFiles])
+    if (dicomFiles.length > 0) {
+      setSelectedFiles([...selectedFiles, ...dicomFiles])
+    }
+    if (additionalFiles.length > 0) {
+      setSelectedAdditionalFiles([...selectedAdditionalFiles, ...additionalFiles])
     }
   }
 
   const removeFile = (index) => {
     setSelectedFiles(selectedFiles.filter((_, i) => i !== index))
+  }
+
+  const removeAdditionalFile = (index) => {
+    setSelectedAdditionalFiles(selectedAdditionalFiles.filter((_, i) => i !== index))
   }
 
   const formatFileSize = (bytes) => {
@@ -149,8 +162,8 @@ const UploadDicom = () => {
       return
     }
     
-    if (selectedFiles.length === 0) {
-      alert('Please select at least one DICOM file')
+    if (selectedFiles.length === 0 && selectedAdditionalFiles.length === 0) {
+      alert('Please select at least one file (DICOM or additional files)')
       return
     }
     
@@ -172,22 +185,53 @@ const UploadDicom = () => {
       const result = await studyService.createStudy(studyData)
       
       if (result.success) {
-        // Upload files to storage and save records
-        const uploadResult = await studyService.uploadDicomFiles(
-          result.study.id,
-          result.study.study_id,
-          selectedFiles
-        )
+        // Upload DICOM files if any
+        let dicomUploadResult = { success: true, uploadedCount: 0 }
+        if (selectedFiles.length > 0) {
+          dicomUploadResult = await studyService.uploadDicomFiles(
+            result.study.id,
+            result.study.study_id,
+            selectedFiles
+          )
+        }
         
-        if (uploadResult.success) {
-          alert(`Study uploaded successfully!\nStudy ID: ${result.study.study_id}\nFiles: ${uploadResult.uploadedCount}/${selectedFiles.length}`)
+        // Upload additional files if any
+        let additionalUploadResult = { success: true, uploadedCount: 0 }
+        if (selectedAdditionalFiles.length > 0) {
+          additionalUploadResult = await studyService.uploadAdditionalFiles(
+            result.study.id,
+            result.study.study_id,
+            selectedAdditionalFiles
+          )
+        }
+        
+        if (dicomUploadResult.success && additionalUploadResult.success) {
+          const totalFiles = selectedFiles.length + selectedAdditionalFiles.length
+          const totalUploaded = dicomUploadResult.uploadedCount + additionalUploadResult.uploadedCount
+          let message = `Study uploaded successfully!\nStudy ID: ${result.study.study_id}\n`
+          if (selectedFiles.length > 0) {
+            message += `DICOM Files: ${dicomUploadResult.uploadedCount}/${selectedFiles.length}\n`
+          }
+          if (selectedAdditionalFiles.length > 0) {
+            message += `Additional Files: ${additionalUploadResult.uploadedCount}/${selectedAdditionalFiles.length}\n`
+          }
+          message += `Total: ${totalUploaded}/${totalFiles}`
+          alert(message)
         } else {
-          alert(`Study created but file upload had issues:\n${uploadResult.message}`)
+          let errorMessage = `Study created but file upload had issues:\n`
+          if (selectedFiles.length > 0) {
+            errorMessage += `DICOM: ${dicomUploadResult.message}\n`
+          }
+          if (selectedAdditionalFiles.length > 0) {
+            errorMessage += `Additional: ${additionalUploadResult.message}`
+          }
+          alert(errorMessage)
         }
         
         // Reset form and close modal
         setShowModal(false)
         setSelectedFiles([])
+        setSelectedAdditionalFiles([])
         setSelectedPatient('')
         setClinicalHistory('')
         setExamPriority('routine')
@@ -336,7 +380,7 @@ const UploadDicom = () => {
                   ) : (
                     <tr>
                       <td colSpan="7" style={{textAlign: 'center', padding: '24px'}}>
-                        No studies found. Click + to upload DICOM files.
+                        No studies found. Click + to upload files.
                       </td>
                     </tr>
                   )}
@@ -364,7 +408,7 @@ const UploadDicom = () => {
                   <p style={{marginBottom: '8px'}}><strong>Study ID:</strong> {studyToDelete.study_id}</p>
                   <p style={{marginBottom: '8px'}}><strong>Patient:</strong> {studyToDelete.patients ? `${studyToDelete.patients.first_name} ${studyToDelete.patients.last_name}` : 'Unknown'}</p>
                   <p style={{color: 'var(--error)', marginTop: '16px', fontSize: '14px'}}>
-                    ⚠️ This action cannot be undone. All DICOM files associated with this study will be permanently deleted.
+                    ⚠️ This action cannot be undone. All files associated with this study will be permanently deleted.
                   </p>
                 </div>
               )}
@@ -411,7 +455,7 @@ const UploadDicom = () => {
             <div className="modal-header">
               <div>
                 <h2>Upload DICOM Study</h2>
-                <p className="modal-subtitle">Upload DICOM files (.dcm, .dicom) or compressed archives (.zip)</p>
+                <p className="modal-subtitle">Upload DICOM files (.dcm, .dicom), compressed archives (.zip), or medical images (.pdf, .jpg, .jpeg, .png)</p>
               </div>
               <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
             </div>
@@ -457,7 +501,7 @@ const UploadDicom = () => {
                     type="file" 
                     id="fileInput" 
                     multiple 
-                    accept=".dcm,.dicom,.zip" 
+                    accept=".dcm,.dicom,.zip,.pdf,.jpg,.jpeg,.png" 
                     style={{display: 'none'}} 
                     onChange={(e) => handleFiles(e.target.files)}
                   />
@@ -476,16 +520,16 @@ const UploadDicom = () => {
                       Browse Files
                     </button>
                     <p style={{margin: '16px 0 0 0', fontSize: '12px', color: 'var(--muted)'}}>
-                      Supported: .dcm, .dicom, .zip (Max 2GB per file)
+                      Supported: .dcm, .dicom, .zip, .pdf, .jpg, .jpeg, .png (Max 2GB per file)
                     </p>
                   </div>
                 </div>
 
-                {/* File List */}
+                {/* DICOM Files List */}
                 {selectedFiles.length > 0 && (
                   <div style={{display: 'block', marginTop: '20px'}}>
                     <h4 style={{margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--ink)'}}>
-                      Selected Files ({selectedFiles.length})
+                      DICOM Files ({selectedFiles.length})
                     </h4>
                     <div style={{maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px'}}>
                       {selectedFiles.map((file, index) => (
@@ -497,6 +541,32 @@ const UploadDicom = () => {
                           <button 
                             type="button"
                             onClick={() => removeFile(index)}
+                            style={{color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer'}}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Files List */}
+                {selectedAdditionalFiles.length > 0 && (
+                  <div style={{display: 'block', marginTop: '20px'}}>
+                    <h4 style={{margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--ink)'}}>
+                      Additional Files ({selectedAdditionalFiles.length})
+                    </h4>
+                    <div style={{maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px'}}>
+                      {selectedAdditionalFiles.map((file, index) => (
+                        <div key={index} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid var(--line)'}}>
+                          <div>
+                            <div style={{fontWeight: 600, fontSize: '14px'}}>{file.name}</div>
+                            <div style={{fontSize: '12px', color: 'var(--muted)'}}>{formatFileSize(file.size)}</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => removeAdditionalFile(index)}
                             style={{color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer'}}
                           >
                             Remove

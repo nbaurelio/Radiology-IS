@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf'
+import { jsPDF } from 'jspdf'
 import logo from '../assets/xferdx-logo.png'
 
 export const generateReportPDF = async (reportData, formData) => {
@@ -35,7 +35,7 @@ export const generateReportPDF = async (reportData, formData) => {
     let age = today.getFullYear() - birthDate.getFullYear()
     const monthDiff = today.getMonth() - birthDate.getMonth()
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
+      age-- 
     }
     return age
   }

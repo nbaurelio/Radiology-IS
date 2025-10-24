@@ -36,12 +36,23 @@ const StudyDetail = () => {
     }
 
     try {
+      // Filter for DICOM files only
+      const dicomFiles = study.dicom_files.filter(file => file.file_type === 'dicom' || !file.file_type)
+      
+      if (dicomFiles.length === 0) {
+        alert('No DICOM files available to view')
+        return
+      }
+
       // Generate signed URLs for all DICOM files
       const urls = []
-      for (const file of study.dicom_files) {
+      for (const file of dicomFiles) {
+        const filePath = file.file_path || file.path
+        if (!filePath) continue
+        
         const { data, error } = await supabase.storage
           .from('dicom-files')
-          .createSignedUrl(file.file_path, 3600) // 1 hour expiry
+          .createSignedUrl(filePath, 3600) // 1 hour expiry
 
         if (error) {
           console.error('Error generating signed URL:', error)
@@ -243,10 +254,11 @@ const StudyDetail = () => {
           </div>
         </article>
 
+        {/* DICOM Files Section */}
         <article className="card" style={{gridColumn: '1 / -1'}}>
           <div className="hd">
-            DICOM Files ({study.dicom_files?.length || 0})
-            {study.dicom_files && study.dicom_files.length > 0 && (
+            DICOM Files ({study.dicom_files?.filter(file => file.file_type === 'dicom' || !file.file_type).length || 0})
+            {study.dicom_files && study.dicom_files.filter(file => file.file_type === 'dicom' || !file.file_type).length > 0 && (
               <button
                 onClick={handleViewImages}
                 style={{
@@ -271,19 +283,20 @@ const StudyDetail = () => {
           </div>
           <div className="bd">
             <div style={{padding: '20px'}}>
-              {study.dicom_files && study.dicom_files.length > 0 ? (
+              {study.dicom_files && study.dicom_files.filter(file => file.file_type === 'dicom' || !file.file_type).length > 0 ? (
                 <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                  {study.dicom_files.map((file, index) => {
-                    const sizeInMB = file.file_size ? (file.file_size / (1024 * 1024)).toFixed(2) : '0.00'
-                    const fileIcon = file.file_name && file.file_name.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
-                    const uploadDate = file.uploaded_at ? new Date(file.uploaded_at).toLocaleString() : 'N/A'
+                  {study.dicom_files.filter(file => file.file_type === 'dicom' || !file.file_type).map((file, index) => {
+                    const sizeInMB = (file.size || file.file_size) ? ((file.size || file.file_size) / (1024 * 1024)).toFixed(2) : '0.00'
+                    const fileName = file.name || file.file_name || `DICOM File ${index + 1}`
+                    const fileIcon = fileName.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
+                    const uploadDate = (file.uploaded_at || file.upload_date) ? new Date(file.uploaded_at || file.upload_date).toLocaleString() : 'N/A'
                     
                     return (
-                      <div key={file.id} className="file-item">
+                      <div key={fileName || index} className="file-item">
                         <div className="file-item-info">
                           <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
                           <div style={{flex: 1, minWidth: 0}}>
-                            <div className="file-item-name">{file.file_name || `DICOM File ${index + 1}`}</div>
+                            <div className="file-item-name">{fileName}</div>
                             <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
                           </div>
                         </div>
@@ -296,6 +309,46 @@ const StudyDetail = () => {
                 </div>
               ) : (
                 <p style={{color: 'var(--muted)'}}>No DICOM files uploaded for this study</p>
+              )}
+            </div>
+          </div>
+        </article>
+
+        {/* Additional Files Section */}
+        <article className="card" style={{gridColumn: '1 / -1'}}>
+          <div className="hd">
+            Additional Files ({study.dicom_files?.filter(file => file.file_type === 'additional').length || 0})
+          </div>
+          <div className="bd">
+            <div style={{padding: '20px'}}>
+              {study.dicom_files && study.dicom_files.filter(file => file.file_type === 'additional').length > 0 ? (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  {study.dicom_files.filter(file => file.file_type === 'additional').map((file, index) => {
+                    const sizeInMB = (file.size || file.file_size) ? ((file.size || file.file_size) / (1024 * 1024)).toFixed(2) : '0.00'
+                    const fileName = file.name || file.file_name || `Additional File ${index + 1}`
+                    const fileIcon = fileName.endsWith('.pdf') ? 'picture_as_pdf' :
+                                   (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) ? 'image' :
+                                   'insert_drive_file'
+                    const uploadDate = (file.uploaded_at || file.upload_date) ? new Date(file.uploaded_at || file.upload_date).toLocaleString() : 'N/A'
+                    
+                    return (
+                      <div key={fileName || index} className="file-item">
+                        <div className="file-item-info">
+                          <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
+                          <div style={{flex: 1, minWidth: 0}}>
+                            <div className="file-item-name">{fileName}</div>
+                            <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
+                          </div>
+                        </div>
+                        <div className="file-item-status">
+                          <span className="badge badge-done">Ready</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p style={{color: 'var(--muted)'}}>No additional files uploaded for this study</p>
               )}
             </div>
           </div>
