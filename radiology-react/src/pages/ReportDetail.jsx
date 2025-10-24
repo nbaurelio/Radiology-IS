@@ -141,26 +141,48 @@ const ReportDetail = () => {
           ← Back to Reports
         </Link>
         {!isEditMode ? (
-          <button 
-            onClick={handleEdit}
-            style={{
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              padding: '8px 12px', 
-              border: '1px solid var(--card-border)', 
-              borderRadius: 'var(--radius)', 
-              background: 'var(--panel)', 
-              color: 'var(--ink)', 
-              cursor: 'pointer', 
-              transition: 'border-color 0.2s ease', 
-              fontFamily: 'inherit', 
-              fontSize: '14px'
-            }}
-          >
-            <span className="material-icons" style={{fontSize: '21px', color: 'var(--muted)'}}>edit</span>
-            Edit Report
-          </button>
+          <div style={{display: 'flex', gap: '12px'}}>
+            <button 
+              onClick={() => window.location.href = `/reports/${id}/generate`}
+              style={{
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '8px 12px', 
+                border: '1px solid var(--card-border)', 
+                borderRadius: 'var(--radius)', 
+                background: 'var(--panel)', 
+                color: 'var(--ink)', 
+                cursor: 'pointer', 
+                transition: 'border-color 0.2s ease', 
+                fontFamily: 'inherit', 
+                fontSize: '14px'
+              }}
+            >
+              <span className="material-symbols-outlined" style={{fontSize: '21px', color: 'var(--muted)'}}>picture_as_pdf</span>
+              Generate Report
+            </button>
+            <button 
+              onClick={handleEdit}
+              style={{
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '8px 12px', 
+                border: '1px solid var(--card-border)', 
+                borderRadius: 'var(--radius)', 
+                background: 'var(--panel)', 
+                color: 'var(--ink)', 
+                cursor: 'pointer', 
+                transition: 'border-color 0.2s ease', 
+                fontFamily: 'inherit', 
+                fontSize: '14px'
+              }}
+            >
+              <span className="material-icons" style={{fontSize: '21px', color: 'var(--muted)'}}>edit</span>
+              Edit Report
+            </button>
+          </div>
         ) : (
           <div style={{display: 'flex', gap: '12px'}}>
             <button 
