@@ -26,5 +26,14 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Generated PDFs
+*.pdf
+!template-of-result.pdf
+!docs/*.pdf
+
+# Temporary files
+*.tmp
+*.temp
+
 # Package locks (optional - some teams commit this)
 # package-lock.json
