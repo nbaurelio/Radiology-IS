@@ -71,8 +71,17 @@ const DicomViewer = ({ imageUrls, onClose }) => {
         // Display image
         cornerstone.displayImage(element, image)
 
+        // Check if canvas was created
+        const canvas = element.querySelector('canvas')
+        console.log('Canvas element:', canvas)
+        console.log('Canvas dimensions:', canvas?.width, canvas?.height)
+
         // Fit to window
         cornerstone.fitToWindow(element)
+
+        // Get viewport info
+        const viewport = cornerstone.getViewport(element)
+        console.log('Viewport:', viewport)
 
         console.log('Image displayed and fitted to window')
         setLoading(false)
