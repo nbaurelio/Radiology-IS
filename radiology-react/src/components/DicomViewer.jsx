@@ -8,16 +8,16 @@ const DicomViewer = ({ imageUrls, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [initialized, setInitialized] = useState(false)
+  const isInitializedRef = useRef(false)
 
-  // Initialize Cornerstone
+  // Initialize Cornerstone once globally
   useEffect(() => {
+    if (isInitializedRef.current) return
+
     try {
-      // Configure cornerstone WADO Image Loader
       cornerstoneWADOImageLoader.external.cornerstone = cornerstone
       cornerstoneWADOImageLoader.external.dicomParser = dicomParser
       
-      // Configure web worker
       const config = {
         maxWebWorkers: 1,
         startWebWorkersOnDemand: true,
@@ -31,80 +31,136 @@ const DicomViewer = ({ imageUrls, onClose }) => {
       }
       
       cornerstoneWADOImageLoader.webWorkerManager.initialize(config)
-      
-      setInitialized(true)
+      isInitializedRef.current = true
       console.log('Cornerstone initialized')
     } catch (err) {
       console.error('Cornerstone init error:', err)
-      setError('Failed to initialize viewer')
     }
   }, [])
 
-  // Load and display image
+  // Enable element once on mount, disable on unmount
   useEffect(() => {
-    if (!initialized || !elementRef.current || !imageUrls || imageUrls.length === 0) {
+    if (!elementRef.current) return
+
+    const element = elementRef.current
+
+    // Wait for element to have non-zero dimensions
+    const waitForDimensions = () => {
+      return new Promise((resolve) => {
+        const check = () => {
+          if (element.offsetWidth > 0 && element.offsetHeight > 0) {
+            console.log('Element has dimensions:', element.offsetWidth, 'x', element.offsetHeight)
+            resolve()
+          } else {
+            requestAnimationFrame(check)
+          }
+        }
+        check()
+      })
+    }
+
+    waitForDimensions().then(() => {
+      try {
+        cornerstone.enable(element)
+        console.log('Element enabled once')
+      } catch (e) {
+        console.error('Failed to enable element:', e)
+      }
+    })
+
+    // Cleanup: disable only on unmount
+    return () => {
+      try {
+        cornerstone.disable(element)
+        console.log('Element disabled on unmount')
+      } catch (e) {
+        // Ignore
+      }
+    }
+  }, [])
+
+  // Load and display image when currentIndex changes
+  useEffect(() => {
+    if (!isInitializedRef.current || !elementRef.current || !imageUrls || imageUrls.length === 0) {
       return
     }
 
-    const loadAndDisplayImage = async () => {
+    let isMounted = true
+    const element = elementRef.current
+
+    const loadImage = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const element = elementRef.current
+        // Verify element is enabled and has dimensions
+        try {
+          cornerstone.getEnabledElement(element)
+        } catch (e) {
+          // Wait a bit and retry
+          await new Promise(resolve => setTimeout(resolve, 100))
+          if (!isMounted) return
+        }
 
-        // Set explicit dimensions
-        element.style.width = '100%'
-        element.style.height = '600px'
+        if (element.offsetWidth === 0 || element.offsetHeight === 0) {
+          throw new Error('Element has no dimensions')
+        }
 
-        // Enable element
-        cornerstone.enable(element)
-
-        // Create WADO URI image ID
+        // Load image
         const imageId = `wadouri:${imageUrls[currentIndex]}`
         console.log('Loading image:', imageId)
 
-        // Load image
         const image = await cornerstone.loadImage(imageId)
-        console.log('Image loaded successfully', image)
+        if (!isMounted) return
+        
+        console.log('Image loaded successfully')
 
         // Display image
         cornerstone.displayImage(element, image)
-
-        // Check if canvas was created
-        const canvas = element.querySelector('canvas')
-        console.log('Canvas element:', canvas)
-        console.log('Canvas dimensions:', canvas?.width, canvas?.height)
-
-        // Fit to window
+        
+        // Immediately resize and fit
+        cornerstone.resize(element, true)
         cornerstone.fitToWindow(element)
 
-        // Get viewport info
-        const viewport = cornerstone.getViewport(element)
-        console.log('Viewport:', viewport)
+        // Log dimensions
+        const canvas = element.querySelector('canvas')
+        console.log('Canvas:', canvas?.width, 'x', canvas?.height)
+        console.log('Element:', element.offsetWidth, 'x', element.offsetHeight)
 
-        console.log('Image displayed and fitted to window')
         setLoading(false)
       } catch (err) {
         console.error('Error loading image:', err)
-        setError(`Failed to load DICOM image: ${err.message}`)
-        setLoading(false)
-      }
-    }
-
-    loadAndDisplayImage()
-
-    // Cleanup
-    return () => {
-      if (elementRef.current) {
-        try {
-          cornerstone.disable(elementRef.current)
-        } catch (e) {
-          // Ignore
+        if (isMounted) {
+          setError(`Failed to load DICOM image: ${err.message}`)
+          setLoading(false)
         }
       }
     }
-  }, [initialized, currentIndex, imageUrls])
+
+    loadImage()
+
+    return () => {
+      isMounted = false
+    }
+  }, [currentIndex, imageUrls])
+
+  // Add resize listener
+  useEffect(() => {
+    if (!elementRef.current) return
+
+    const element = elementRef.current
+    const handleResize = () => {
+      try {
+        cornerstone.resize(element, true)
+        cornerstone.fitToWindow(element)
+      } catch (e) {
+        // Ignore if not enabled
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
@@ -133,13 +189,24 @@ const DicomViewer = ({ imageUrls, onClose }) => {
   }
 
   return (
-    <div className="modal" style={{ display: 'flex', background: 'rgba(0,0,0,0.95)' }}>
+    <div style={{ 
+      display: 'block', 
+      background: 'rgba(0,0,0,0.95)',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 9999,
+      overflow: 'auto'
+    }}>
       <div style={{ 
         width: '100%', 
-        height: '100%', 
+        height: '100vh', 
         display: 'flex', 
         flexDirection: 'column',
-        padding: '20px'
+        padding: '20px',
+        boxSizing: 'border-box'
       }}>
         {/* Header */}
         <div style={{ 
@@ -173,7 +240,8 @@ const DicomViewer = ({ imageUrls, onClose }) => {
 
         {/* Viewer Container */}
         <div style={{ 
-          flex: 1, 
+          width: '100%',
+          height: '700px',
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
@@ -217,10 +285,7 @@ const DicomViewer = ({ imageUrls, onClose }) => {
             ref={elementRef}
             style={{ 
               width: '100%', 
-              height: '100%',
-              minHeight: '500px',
-              display: loading || error ? 'none' : 'block',
-              position: 'relative'
+              height: '700px'
             }}
           />
         </div>
