@@ -1,74 +1,20 @@
 import React, { useState, useEffect } from 'react'
-import { Trash2 } from 'lucide-react'
 import { studyService } from '../services/studyService'
 import { patientService } from '../services/patientService'
 
 const UploadDicom = () => {
-  const [studies, setStudies] = useState([])
   const [patients, setPatients] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showModal, setShowModal] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState([])
   const [selectedAdditionalFiles, setSelectedAdditionalFiles] = useState([])
   const [selectedPatient, setSelectedPatient] = useState('')
   const [clinicalHistory, setClinicalHistory] = useState('')
   const [examPriority, setExamPriority] = useState('routine')
   const [dragActive, setDragActive] = useState(false)
-  const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
-  const [studyToDelete, setStudyToDelete] = useState(null)
 
   useEffect(() => {
-    loadStudies()
     loadPatients()
   }, [])
-
-  const loadStudies = async () => {
-    try {
-      const result = await studyService.getRecentStudies()
-      if (result.success) {
-        setStudies(result.studies)
-      }
-    } catch (error) {
-      console.error('Error loading studies:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDeleteClick = (e, study) => {
-    e.stopPropagation()
-    setStudyToDelete(study)
-    setDeleteConfirmModal(true)
-  }
-
-  const confirmDelete = async () => {
-    if (!studyToDelete) return
-    
-    setLoading(true)
-    try {
-      const result = await studyService.deleteStudy(studyToDelete.id, studyToDelete.study_id)
-      
-      if (result.success) {
-        alert('Study deleted successfully')
-        await loadStudies()
-      } else {
-        alert(`Error deleting study: ${result.message}`)
-      }
-    } catch (error) {
-      console.error('Delete error:', error)
-      alert('An error occurred while deleting the study')
-    } finally {
-      setLoading(false)
-      setDeleteConfirmModal(false)
-      setStudyToDelete(null)
-    }
-  }
-
-  const cancelDelete = () => {
-    setDeleteConfirmModal(false)
-    setStudyToDelete(null)
-  }
 
   const loadPatients = async () => {
     try {
@@ -228,16 +174,15 @@ const UploadDicom = () => {
           alert(errorMessage)
         }
         
-        // Reset form and close modal
-        setShowModal(false)
+        // Reset form
         setSelectedFiles([])
         setSelectedAdditionalFiles([])
         setSelectedPatient('')
         setClinicalHistory('')
         setExamPriority('routine')
         
-        // Reload studies list
-        await loadStudies()
+        // Navigate to dashboard
+        window.location.href = '/dashboard'
       } else {
         alert(`Error uploading study: ${result.message}`)
       }
@@ -249,41 +194,192 @@ const UploadDicom = () => {
     }
   }
 
-  const getPriorityBadgeClass = (priority) => {
-    return priority === 'stat' ? 'badge-priority-stat' :
-           priority === 'urgent' ? 'badge-priority-urgent' : 'badge-priority-routine'
-  }
-
-  const getBadgeClass = (status) => {
-    return status === 'pending' ? 'badge-pending' :
-           status === 'reading' ? 'badge-reading' : 'badge-done'
-  }
-
   return (
-    <>
-      <section className="grid">
-        {/* Search and Add Upload Bar */}
-        <article className="card search-bar">
-          <div className="search-container">
-            <input 
-              type="text" 
-              className="search-input" 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search studies by patient, study ID, or modality..." 
-            />
-          </div>
-          <button 
-            className="add-patient-btn" 
-            onClick={() => setShowModal(true)}
-            aria-label="Upload DICOM"
-          >
-            <span className="plus-icon">+</span>
-          </button>
-        </article>
+    <div className="container">
+      <div className="form-page">
+        <h1 style={{fontSize: '28px', marginBottom: '24px', color: 'var(--text)'}}>Upload DICOM Study</h1>
 
-        {/* Studies List */}
-        <article className="card table-card">
+        <form onSubmit={handleSubmit}>
+          {/* Patient Selection Section */}
+          <div className="form-section">
+            <h2 className="form-section-title">Patient Information</h2>
+            <p className="form-section-subtitle">Select the patient for this study</p>
+
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label htmlFor="patientSelect">Select Patient <span className="required">*</span></label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">person</span>
+                  <select 
+                    id="patientSelect" 
+                    className="form-input" 
+                    required
+                    value={selectedPatient}
+                    onChange={(e) => setSelectedPatient(e.target.value)}
+                    style={{paddingLeft: '40px'}}
+                  >
+                    <option value="">Select a patient</option>
+                    {patients.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.patient_id} - {p.first_name} {p.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
+                  Patient ID is required for study association
+                </small>
+              </div>
+            </div>
+          </div>
+
+          {/* File Upload Section */}
+          <div className="form-section">
+            <h2 className="form-section-title">Upload Files</h2>
+            <p className="form-section-subtitle">Upload DICOM files (.dcm, .dicom), compressed archives (.zip), or medical images (.pdf, .jpg, .jpeg, .png)</p>
+
+            {/* Drag and Drop Upload Area */}
+            <div 
+              className={`upload-zone ${dragActive ? 'drag-over' : ''}`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('fileInput').click()}
+            >
+              <input 
+                type="file" 
+                id="fileInput" 
+                multiple 
+                accept=".dcm,.dicom,.zip,.pdf,.jpg,.jpeg,.png" 
+                style={{display: 'none'}} 
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+              <div className="upload-zone-content">
+                <span className="material-symbols-outlined" style={{fontSize: '64px', color: 'var(--brand)', marginBottom: '16px'}}>cloud_upload</span>
+                <h3 style={{margin: '0 0 8px 0', fontSize: '18px', color: 'var(--ink)'}}>
+                  Drag & Drop DICOM Files
+                </h3>
+                <p style={{margin: '0 0 16px 0', color: 'var(--muted)'}}>or click to browse</p>
+                <button 
+                  type="button" 
+                  className="btn" 
+                  id="browseBtn"
+                  style={{background: 'var(--brand)', color: 'white', border: 'none'}}
+                >
+                  Browse Files
+                </button>
+                <p style={{margin: '16px 0 0 0', fontSize: '12px', color: 'var(--muted)'}}>
+                  Supported: .dcm, .dicom, .zip, .pdf, .jpg, .jpeg, .png (Max 2GB per file)
+                </p>
+              </div>
+            </div>
+
+            {/* DICOM Files List */}
+            {selectedFiles.length > 0 && (
+              <div style={{display: 'block', marginTop: '20px'}}>
+                <h4 style={{margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--ink)'}}>
+                  DICOM Files ({selectedFiles.length})
+                </h4>
+                <div style={{maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px'}}>
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid var(--line)'}}>
+                      <div>
+                        <div style={{fontWeight: 600, fontSize: '14px'}}>{file.name}</div>
+                        <div style={{fontSize: '12px', color: 'var(--muted)'}}>{formatFileSize(file.size)}</div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        style={{color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer'}}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Additional Files List */}
+            {selectedAdditionalFiles.length > 0 && (
+              <div style={{display: 'block', marginTop: '20px'}}>
+                <h4 style={{margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--ink)'}}>
+                  Additional Files ({selectedAdditionalFiles.length})
+                </h4>
+                <div style={{maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px'}}>
+                  {selectedAdditionalFiles.map((file, index) => (
+                    <div key={index} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid var(--line)'}}>
+                      <div>
+                        <div style={{fontWeight: 600, fontSize: '14px'}}>{file.name}</div>
+                        <div style={{fontSize: '12px', color: 'var(--muted)'}}>{formatFileSize(file.size)}</div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => removeAdditionalFile(index)}
+                        style={{color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer'}}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Study Metadata Section */}
+          <div className="form-section">
+            <h2 className="form-section-title">Study Details</h2>
+            <p className="form-section-subtitle">Additional information about the study</p>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="clinicalHistory">Clinical History</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">notes</span>
+                  <input 
+                    type="text" 
+                    id="clinicalHistory" 
+                    className="form-input" 
+                    placeholder="Ex: Suspected pneumonia"
+                    value={clinicalHistory}
+                    onChange={(e) => setClinicalHistory(e.target.value)}
+                    style={{paddingLeft: '40px'}}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="examPriority">Exam Priority <span className="required">*</span></label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">priority_high</span>
+                  <select 
+                    id="examPriority" 
+                    className="form-input" 
+                    required
+                    value={examPriority}
+                    onChange={(e) => setExamPriority(e.target.value)}
+                    style={{paddingLeft: '40px'}}
+                  >
+                    <option value="routine">Routine</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="stat">STAT</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="form-actions">
+            <button type="submit" className="btn-create" disabled={loading}>
+              {loading ? 'Uploading...' : 'Upload Study'}
+            </button>
+          </div>
+        </form>
+
+        {/* Studies List - Commented Out */}
+        {/* <article className="card table-card">
           <div className="hd">DICOM Studies (<span>{studies.length}</span>)</div>
           <div className="bd">
             <div className="table-wrap">
@@ -388,11 +484,11 @@ const UploadDicom = () => {
               </table>
             </div>
           </div>
-        </article>
-      </section>
+        </article> */}
+      </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmModal && (
+      {/* Delete Confirmation Modal - Commented Out */}
+      {/* {deleteConfirmModal && (
         <div className="modal" style={{display: 'flex', padding: '130px 20px 40px'}}>
           <div className="modal-content" style={{maxWidth: '500px', margin: 'auto'}}>
             <div className="modal-header">
@@ -446,181 +542,8 @@ const UploadDicom = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Upload DICOM Modal */}
-      {showModal && (
-        <div className="modal" style={{display: 'flex', padding: '130px 20px 40px'}}>
-          <div className="modal-content" style={{maxWidth: '800px', margin: 'auto', maxHeight: 'calc(100vh - 170px)', overflowY: 'auto'}}>
-            <div className="modal-header">
-              <div>
-                <h2>Upload DICOM Study</h2>
-                <p className="modal-subtitle">Upload DICOM files (.dcm, .dicom), compressed archives (.zip), or medical images (.pdf, .jpg, .jpeg, .png)</p>
-              </div>
-              <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={handleSubmit}>
-                {/* Patient Selection */}
-                <div className="form-row">
-                  <div className="form-group full-width">
-                    <label htmlFor="patientSelect">Select Patient <span className="required">*</span></label>
-                    <div className="input-with-icon">
-                      <span className="material-icons input-icon">person</span>
-                      <select 
-                        id="patientSelect" 
-                        className="form-input" 
-                        required
-                        value={selectedPatient}
-                        onChange={(e) => setSelectedPatient(e.target.value)}
-                      >
-                        <option value="">Select a patient</option>
-                        {patients.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.patient_id} - {p.first_name} {p.last_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
-                      Patient ID is required for study association
-                    </small>
-                  </div>
-                </div>
-
-                {/* Drag and Drop Upload Area */}
-                <div 
-                  className={`upload-zone ${dragActive ? 'drag-over' : ''}`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => document.getElementById('fileInput').click()}
-                >
-                  <input 
-                    type="file" 
-                    id="fileInput" 
-                    multiple 
-                    accept=".dcm,.dicom,.zip,.pdf,.jpg,.jpeg,.png" 
-                    style={{display: 'none'}} 
-                    onChange={(e) => handleFiles(e.target.files)}
-                  />
-                  <div className="upload-zone-content">
-                    <span className="material-symbols-outlined" style={{fontSize: '64px', color: 'var(--brand)', marginBottom: '16px'}}>cloud_upload</span>
-                    <h3 style={{margin: '0 0 8px 0', fontSize: '18px', color: 'var(--ink)'}}>
-                      Drag & Drop DICOM Files
-                    </h3>
-                    <p style={{margin: '0 0 16px 0', color: 'var(--muted)'}}>or click to browse</p>
-                    <button 
-                      type="button" 
-                      className="btn" 
-                      id="browseBtn"
-                      style={{background: 'var(--brand)', color: 'white', border: 'none'}}
-                    >
-                      Browse Files
-                    </button>
-                    <p style={{margin: '16px 0 0 0', fontSize: '12px', color: 'var(--muted)'}}>
-                      Supported: .dcm, .dicom, .zip, .pdf, .jpg, .jpeg, .png (Max 2GB per file)
-                    </p>
-                  </div>
-                </div>
-
-                {/* DICOM Files List */}
-                {selectedFiles.length > 0 && (
-                  <div style={{display: 'block', marginTop: '20px'}}>
-                    <h4 style={{margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--ink)'}}>
-                      DICOM Files ({selectedFiles.length})
-                    </h4>
-                    <div style={{maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px'}}>
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid var(--line)'}}>
-                          <div>
-                            <div style={{fontWeight: 600, fontSize: '14px'}}>{file.name}</div>
-                            <div style={{fontSize: '12px', color: 'var(--muted)'}}>{formatFileSize(file.size)}</div>
-                          </div>
-                          <button 
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            style={{color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer'}}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Additional Files List */}
-                {selectedAdditionalFiles.length > 0 && (
-                  <div style={{display: 'block', marginTop: '20px'}}>
-                    <h4 style={{margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--ink)'}}>
-                      Additional Files ({selectedAdditionalFiles.length})
-                    </h4>
-                    <div style={{maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px'}}>
-                      {selectedAdditionalFiles.map((file, index) => (
-                        <div key={index} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid var(--line)'}}>
-                          <div>
-                            <div style={{fontWeight: 600, fontSize: '14px'}}>{file.name}</div>
-                            <div style={{fontSize: '12px', color: 'var(--muted)'}}>{formatFileSize(file.size)}</div>
-                          </div>
-                          <button 
-                            type="button"
-                            onClick={() => removeAdditionalFile(index)}
-                            style={{color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer'}}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Study Metadata */}
-                <div className="form-row" style={{marginTop: '20px'}}>
-                  <div className="form-group">
-                    <label htmlFor="clinicalHistory">Clinical History</label>
-                    <div className="input-with-icon">
-                      <span className="material-icons input-icon">notes</span>
-                      <input 
-                        type="text" 
-                        id="clinicalHistory" 
-                        className="form-input" 
-                        placeholder="Ex: Suspected pneumonia"
-                        value={clinicalHistory}
-                        onChange={(e) => setClinicalHistory(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="examPriority">Exam Priority <span className="required">*</span></label>
-                    <div className="input-with-icon">
-                      <span className="material-icons input-icon">priority_high</span>
-                      <select 
-                        id="examPriority" 
-                        className="form-input" 
-                        required
-                        value={examPriority}
-                        onChange={(e) => setExamPriority(e.target.value)}
-                      >
-                        <option value="routine">Routine</option>
-                        <option value="urgent">Urgent</option>
-                        <option value="stat">STAT</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <button type="submit" className="btn-create" style={{marginTop: '20px'}}>
-                  Upload Study
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      )} */}
+    </div>
   )
 }
 
