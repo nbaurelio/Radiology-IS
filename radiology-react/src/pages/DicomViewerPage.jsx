@@ -1,13 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { studyService } from '../services/studyService'
 import * as cornerstone from 'cornerstone-core'
 import * as cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader'
 import dicomParser from 'dicom-parser'
 
-const DicomViewer = ({ imageUrls, onClose }) => {
-  const elementRef = useRef(null)
-  const [currentIndex, setCurrentIndex] = useState(0)
+const DicomViewerPage = () => {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [imageUrls, setImageUrls] = useState([])
   const [loading, setLoading] = useState(true)
+  const [imageLoading, setImageLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const elementRef = useRef(null)
   const isInitializedRef = useRef(false)
 
   // Initialize Cornerstone once globally
@@ -38,13 +45,77 @@ const DicomViewer = ({ imageUrls, onClose }) => {
     }
   }, [])
 
+  useEffect(() => {
+    loadDicomImages()
+  }, [id])
+
+  const loadDicomImages = async () => {
+    try {
+      const result = await studyService.getStudyById(id)
+      if (!result.success || !result.study) {
+        navigate(`/studies/${id}`)
+        return
+      }
+
+      const study = result.study
+      
+      if (!study.dicom_files || study.dicom_files.length === 0) {
+        alert('No DICOM files available to view')
+        navigate(`/studies/${id}`)
+        return
+      }
+
+      // Filter for DICOM files only
+      const dicomFiles = study.dicom_files.filter(file => file.file_type === 'dicom' || !file.file_type)
+      
+      if (dicomFiles.length === 0) {
+        alert('No DICOM files available to view')
+        navigate(`/studies/${id}`)
+        return
+      }
+
+      // Generate signed URLs for all DICOM files
+      const urls = []
+      for (const file of dicomFiles) {
+        const filePath = file.file_path || file.path
+        if (!filePath) continue
+        
+        const { data, error } = await supabase.storage
+          .from('dicom-files')
+          .createSignedUrl(filePath, 3600) // 1 hour expiry
+
+        if (error) {
+          console.error('Error generating signed URL:', error)
+          continue
+        }
+
+        if (data?.signedUrl) {
+          urls.push(data.signedUrl)
+        }
+      }
+
+      if (urls.length === 0) {
+        alert('Failed to load DICOM files')
+        navigate(`/studies/${id}`)
+        return
+      }
+
+      setImageUrls(urls)
+    } catch (error) {
+      console.error('Error loading images:', error)
+      alert('Failed to load images')
+      navigate(`/studies/${id}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Enable element once on mount, disable on unmount
   useEffect(() => {
     if (!elementRef.current) return
 
     const element = elementRef.current
 
-    // Wait for element to have non-zero dimensions
     const waitForDimensions = () => {
       return new Promise((resolve) => {
         const check = () => {
@@ -68,7 +139,6 @@ const DicomViewer = ({ imageUrls, onClose }) => {
       }
     })
 
-    // Cleanup: disable only on unmount
     return () => {
       try {
         cornerstone.disable(element)
@@ -90,14 +160,12 @@ const DicomViewer = ({ imageUrls, onClose }) => {
 
     const loadImage = async () => {
       try {
-        setLoading(true)
+        setImageLoading(true)
         setError(null)
 
-        // Verify element is enabled and has dimensions
         try {
           cornerstone.getEnabledElement(element)
         } catch (e) {
-          // Wait a bit and retry
           await new Promise(resolve => setTimeout(resolve, 100))
           if (!isMounted) return
         }
@@ -106,7 +174,6 @@ const DicomViewer = ({ imageUrls, onClose }) => {
           throw new Error('Element has no dimensions')
         }
 
-        // Load image
         const imageId = `wadouri:${imageUrls[currentIndex]}`
         console.log('Loading image:', imageId)
 
@@ -115,24 +182,20 @@ const DicomViewer = ({ imageUrls, onClose }) => {
         
         console.log('Image loaded successfully')
 
-        // Display image
         cornerstone.displayImage(element, image)
-        
-        // Immediately resize and fit
         cornerstone.resize(element, true)
         cornerstone.fitToWindow(element)
 
-        // Log dimensions
         const canvas = element.querySelector('canvas')
         console.log('Canvas:', canvas?.width, 'x', canvas?.height)
         console.log('Element:', element.offsetWidth, 'x', element.offsetHeight)
 
-        setLoading(false)
+        setImageLoading(false)
       } catch (err) {
         console.error('Error loading image:', err)
         if (isMounted) {
           setError(`Failed to load DICOM image: ${err.message}`)
-          setLoading(false)
+          setImageLoading(false)
         }
       }
     }
@@ -174,6 +237,18 @@ const DicomViewer = ({ imageUrls, onClose }) => {
     }
   }
 
+  const handleClose = () => {
+    navigate(`/studies/${id}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="container">
+        <p style={{textAlign: 'center', color: 'var(--muted)', padding: '40px'}}>Loading DICOM images...</p>
+      </div>
+    )
+  }
+
   if (!imageUrls || imageUrls.length === 0) {
     return (
       <div className="modal" style={{ display: 'flex' }}>
@@ -182,63 +257,52 @@ const DicomViewer = ({ imageUrls, onClose }) => {
           <p style={{ color: 'var(--muted)', marginBottom: '20px' }}>
             No DICOM files found for this study.
           </p>
-          <button onClick={onClose} className="btn-primary">Close</button>
+          <button onClick={handleClose} className="btn-primary">Close</button>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ 
-      display: 'block', 
-      background: 'rgba(0,0,0,0.95)',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 9999,
-      overflow: 'auto'
-    }}>
+    <article className="card" style={{ padding: '0', margin: '0', width: '100%', minHeight: '100vh' }}>
+      {/* Header */}
       <div style={{ 
-        width: '100%', 
-        height: '100vh', 
         display: 'flex', 
-        flexDirection: 'column',
-        padding: '20px',
-        boxSizing: 'border-box'
+        alignItems: 'center',
+        gap: '20px',
+        padding: '20px 20px 0 20px',
+        marginBottom: '20px',
+        color: 'var(--ink)'
       }}>
-        {/* Header */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginBottom: '20px',
-          color: 'white'
-        }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '20px' }}>DICOM Viewer</h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px', opacity: 0.7 }}>
-              Image {currentIndex + 1} of {imageUrls.length}
-            </p>
-          </div>
-          <button 
-            onClick={onClose}
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}
-          >
-            ✕ Close
-          </button>
+        <button
+          onClick={handleClose}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            border: '1px solid var(--card-border)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--panel)',
+            color: 'var(--ink)',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s ease',
+            fontFamily: 'inherit',
+            fontSize: '14px',
+            textDecoration: 'none'
+          }}
+        >
+          ← Back to Study Information
+        </button>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>DICOM Viewer</h2>
+          <p style={{ margin: '4px 0 0 0', fontSize: '14px', opacity: 0.7 }}>
+            Image {currentIndex + 1} of {imageUrls.length}
+          </p>
         </div>
-
-        {/* Viewer Container */}
+      </div>
+      
+      <div style={{ padding: '0 20px' }}>
         <div style={{ 
           width: '100%',
           height: '700px',
@@ -250,13 +314,13 @@ const DicomViewer = ({ imageUrls, onClose }) => {
           borderRadius: '8px',
           overflow: 'hidden'
         }}>
-          {loading && (
+          {imageLoading && (
             <div style={{ 
               position: 'absolute',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              color: 'white',
+              color: 'var(--muted)',
               fontSize: '16px',
               zIndex: 10
             }}>
@@ -270,7 +334,7 @@ const DicomViewer = ({ imageUrls, onClose }) => {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              color: '#ff6b6b',
+              color: 'var(--error)',
               fontSize: '16px',
               textAlign: 'center',
               padding: '20px',
@@ -289,52 +353,55 @@ const DicomViewer = ({ imageUrls, onClose }) => {
             }}
           />
         </div>
-
-        {/* Navigation Controls */}
-        {imageUrls.length > 1 && (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: '12px',
-            marginTop: '20px'
-          }}>
-            <button
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: 'white',
-                padding: '10px 20px',
-                borderRadius: '8px',
-                cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
-                opacity: currentIndex === 0 ? 0.5 : 1,
-                fontSize: '14px'
-              }}
-            >
-              ← Previous
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === imageUrls.length - 1}
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: 'white',
-                padding: '10px 20px',
-                borderRadius: '8px',
-                cursor: currentIndex === imageUrls.length - 1 ? 'not-allowed' : 'pointer',
-                opacity: currentIndex === imageUrls.length - 1 ? 0.5 : 1,
-                fontSize: '14px'
-              }}
-            >
-              Next →
-            </button>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Navigation Controls */}
+      {imageUrls.length > 1 && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: '12px',
+          marginTop: '20px',
+          padding: '0 20px 20px 20px'
+        }}>
+          <button
+            onClick={handlePrevious}
+            disabled={currentIndex === 0}
+            style={{
+              background: currentIndex === 0 ? 'var(--muted)' : 'var(--brand)',
+              border: 'none',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+              opacity: currentIndex === 0 ? 0.5 : 1,
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            ← Previous
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={currentIndex === imageUrls.length - 1}
+            style={{
+              background: currentIndex === imageUrls.length - 1 ? 'var(--muted)' : 'var(--brand)',
+              border: 'none',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              cursor: currentIndex === imageUrls.length - 1 ? 'not-allowed' : 'pointer',
+              opacity: currentIndex === imageUrls.length - 1 ? 0.5 : 1,
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            Next →
+          </button>
+        </div>
+      )}
+    </article>
   )
 }
 
-export default DicomViewer
+export default DicomViewerPage

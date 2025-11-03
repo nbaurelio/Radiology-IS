@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { studyService } from '../services/studyService'
-import { supabase } from '../lib/supabase'
-import DicomViewer from '../components/DicomViewer'
 
 const StudyDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [study, setStudy] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [showViewer, setShowViewer] = useState(false)
-  const [imageUrls, setImageUrls] = useState([])
 
   useEffect(() => {
     loadStudy()
@@ -29,52 +25,22 @@ const StudyDetail = () => {
     }
   }
 
-  const handleViewImages = async () => {
+  const handleViewImages = () => {
     if (!study || !study.dicom_files || study.dicom_files.length === 0) {
       alert('No DICOM files available to view')
       return
     }
 
-    try {
-      // Filter for DICOM files only
-      const dicomFiles = study.dicom_files.filter(file => file.file_type === 'dicom' || !file.file_type)
-      
-      if (dicomFiles.length === 0) {
-        alert('No DICOM files available to view')
-        return
-      }
-
-      // Generate signed URLs for all DICOM files
-      const urls = []
-      for (const file of dicomFiles) {
-        const filePath = file.file_path || file.path
-        if (!filePath) continue
-        
-        const { data, error } = await supabase.storage
-          .from('dicom-files')
-          .createSignedUrl(filePath, 3600) // 1 hour expiry
-
-        if (error) {
-          console.error('Error generating signed URL:', error)
-          continue
-        }
-
-        if (data?.signedUrl) {
-          urls.push(data.signedUrl)
-        }
-      }
-
-      if (urls.length === 0) {
-        alert('Failed to load DICOM files')
-        return
-      }
-
-      setImageUrls(urls)
-      setShowViewer(true)
-    } catch (error) {
-      console.error('Error loading images:', error)
-      alert('Failed to load images')
+    // Filter for DICOM files only
+    const dicomFiles = study.dicom_files.filter(file => file.file_type === 'dicom' || !file.file_type)
+    
+    if (dicomFiles.length === 0) {
+      alert('No DICOM files available to view')
+      return
     }
+
+    // Navigate to viewer page
+    navigate(`/studies/${id}/viewer`)
   }
 
   if (loading) {
@@ -354,14 +320,6 @@ const StudyDetail = () => {
           </div>
         </article>
       </section>
-
-      {/* DICOM Viewer Modal */}
-      {showViewer && (
-        <DicomViewer 
-          imageUrls={imageUrls}
-          onClose={() => setShowViewer(false)}
-        />
-      )}
     </div>
   )
 }

@@ -14,6 +14,7 @@ import ReportDetail from './pages/ReportDetail'
 import GenerateReport from './pages/GenerateReport'
 import UploadDicom from './pages/UploadDicom'
 import StudyDetail from './pages/StudyDetail'
+import DicomViewerPage from './pages/DicomViewerPage'
 import Telehealth from './pages/Telehealth'
 import AdminPage from './pages/AdminPage'
 
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/upload" element={<UploadDicom />} />
                 <Route path="/telehealth" element={<Telehealth />} />
                 <Route path="/studies/:id" element={<StudyDetail />} />
+                <Route path="/studies/:id/viewer" element={<DicomViewerPage />} />
                 <Route path="/admin" element={<AdminPage />} />
               </Route>
             </Route>
