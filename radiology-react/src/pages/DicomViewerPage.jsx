@@ -14,8 +14,10 @@ const DicomViewerPage = () => {
   const [imageLoading, setImageLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [elementEnabled, setElementEnabled] = useState(false)
   const elementRef = useRef(null)
   const isInitializedRef = useRef(false)
+  const strictMountCountRef = useRef(0)
 
   // Initialize Cornerstone once globally
   useEffect(() => {
@@ -112,9 +114,22 @@ const DicomViewerPage = () => {
 
   // Enable element once on mount, disable on unmount
   useEffect(() => {
+    console.log('Enable effect running, elementRef.current:', !!elementRef.current)
     if (!elementRef.current) return
 
     const element = elementRef.current
+    strictMountCountRef.current += 1
+    const currentMountCount = strictMountCountRef.current
+
+    // Check if already enabled (Strict Mode remount case)
+    try {
+      cornerstone.getEnabledElement(element)
+      console.log('Element already enabled (remount)')
+      setElementEnabled(true)
+      return
+    } catch (e) {
+      console.log('Element not enabled yet, proceeding with enablement')
+    }
 
     const waitForDimensions = () => {
       return new Promise((resolve) => {
@@ -133,27 +148,64 @@ const DicomViewerPage = () => {
     waitForDimensions().then(() => {
       try {
         cornerstone.enable(element)
-        console.log('Element enabled once')
+        // Verify enablement succeeded
+        cornerstone.getEnabledElement(element)
+        console.log('Element enabled successfully')
+        setElementEnabled(true)
       } catch (e) {
         console.error('Failed to enable element:', e)
+        setElementEnabled(false)
       }
     })
 
     return () => {
-      try {
-        cornerstone.disable(element)
-        console.log('Element disabled on unmount')
-      } catch (e) {
-        // Ignore
+      // Guard against Strict Mode double-mount: only disable on real unmount
+      // In dev, Strict Mode mounts → unmounts → mounts again
+      // We skip the first cleanup (when currentMountCount === 1 in dev)
+      const isStrictModeTestUnmount = process.env.NODE_ENV === 'development' && currentMountCount === 1
+      
+      if (!isStrictModeTestUnmount) {
+        try {
+          setElementEnabled(false)
+          cornerstone.disable(element)
+          console.log('Element disabled on unmount')
+        } catch (e) {
+          // Ignore
+        }
       }
     }
-  }, [])
+  }, [imageUrls])
 
   // Load and display image when currentIndex changes
+  // Only runs when element is confirmed enabled
   useEffect(() => {
-    if (!isInitializedRef.current || !elementRef.current || !imageUrls || imageUrls.length === 0) {
+    console.log('Load image effect triggered. State:', {
+      initialized: isInitializedRef.current,
+      hasElement: !!elementRef.current,
+      hasUrls: imageUrls?.length > 0,
+      urlsLength: imageUrls?.length,
+      elementEnabled: elementEnabled,
+      currentIndex: currentIndex
+    })
+    
+    if (!isInitializedRef.current) {
+      console.log('Skipped: not initialized')
       return
     }
+    if (!elementRef.current) {
+      console.log('Skipped: no element ref')
+      return
+    }
+    if (!imageUrls || imageUrls.length === 0) {
+      console.log('Skipped: no image URLs')
+      return
+    }
+    if (!elementEnabled) {
+      console.log('Skipped: element not enabled')
+      return
+    }
+    
+    console.log('✓ Load image effect RUNNING')
 
     let isMounted = true
     const element = elementRef.current
@@ -163,15 +215,35 @@ const DicomViewerPage = () => {
         setImageLoading(true)
         setError(null)
 
-        try {
-          cornerstone.getEnabledElement(element)
-        } catch (e) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          if (!isMounted) return
+        // Wait for element to be enabled with proper retry logic
+        const waitForEnabled = async () => {
+          const maxAttempts = 30 // 3 seconds total
+          const delayMs = 100
+          
+          for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+              cornerstone.getEnabledElement(element)
+              return true // Successfully enabled
+            } catch (e) {
+              if (!isMounted) return false
+              await new Promise(resolve => setTimeout(resolve, delayMs))
+            }
+          }
+          throw new Error('Viewer not ready: element enablement timeout after 3 seconds')
         }
 
+        const isEnabled = await waitForEnabled()
+        if (!isEnabled || !isMounted) return
+
+        // Validate container size before displaying
         if (element.offsetWidth === 0 || element.offsetHeight === 0) {
-          throw new Error('Element has no dimensions')
+          // Retry after next animation frame
+          await new Promise(resolve => requestAnimationFrame(resolve))
+          if (!isMounted) return
+          
+          if (element.offsetWidth === 0 || element.offsetHeight === 0) {
+            throw new Error('Element has no dimensions after retry')
+          }
         }
 
         const imageId = `wadouri:${imageUrls[currentIndex]}`
@@ -205,7 +277,7 @@ const DicomViewerPage = () => {
     return () => {
       isMounted = false
     }
-  }, [currentIndex, imageUrls])
+  }, [currentIndex, imageUrls, elementEnabled])
 
   // Add resize listener
   useEffect(() => {
@@ -324,7 +396,7 @@ const DicomViewerPage = () => {
               fontSize: '16px',
               zIndex: 10
             }}>
-              Loading DICOM image...
+              Loading DICOM image. This might take a while ...
             </div>
           )}
           
