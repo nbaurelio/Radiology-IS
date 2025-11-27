@@ -46,7 +46,7 @@ body{
 }
 
 /* Background image layer (semi-opaque) */
-body::before{
+body.login-page::before{
   content: "";
   position: fixed;
   inset: 0;
