@@ -45,6 +45,26 @@ body{
   font: 14px/1.45 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
+/* Background image layer (semi-opaque) */
+body::before{
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url('/src/assets/images.jfif');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.22; /* increased for better visibility; tweak this value as needed */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure main app content sits above the background layer */
+.app-root{
+  position: relative;
+  z-index: 1;
+}
+
 /* Top Navbar */
 .topnav{
   position:sticky; 

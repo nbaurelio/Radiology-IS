@@ -23,7 +23,7 @@ function App() {
     <AuthProvider>
       <NotificationProvider>
         <Router>
-          <div>
+          <div className="app-root">
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

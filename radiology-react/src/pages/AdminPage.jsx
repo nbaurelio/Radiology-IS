@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { AlertCircle, Trash2, Users, FileText, Database, Eye, EyeOff } from 'lucide-react'
+import { useNotifications } from '../contexts/NotificationContext'
+import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
 const AdminPage = () => {
   const { user } = useAuth()
@@ -28,6 +30,7 @@ const AdminPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isEditingUser, setIsEditingUser] = useState(false)
   const [editUserData, setEditUserData] = useState(null)
+  const { addNotification } = useNotifications()
 
   // Redirect if not admin
   if (!user || (user.userType !== 'Hospital Admin' && user.userType !== 'Administrator')) {
@@ -62,6 +65,16 @@ const AdminPage = () => {
       if (error) throw error
 
       showMessage('success', 'User deleted successfully')
+      // Notification for deleted user
+      addNotification(createNotification({
+        type: 'user_deleted',
+        title: '🗑️ User Deleted',
+        message: `User ${userToDelete} has been deleted from the system.`,
+        priority: PRIORITY_LEVELS.ROUTINE,
+        recipientRole: USER_ROLES.ADMIN,
+        linkedEntity: { user_id: userToDelete },
+        autoRemove: false
+      }))
       await loadUsers()
     } catch (error) {
       console.error('Delete user error:', error)
@@ -121,6 +134,29 @@ const AdminPage = () => {
       if (error) throw error
 
       showMessage('success', 'User information updated successfully')
+      // Notification for user edit - include changed fields
+      try {
+        const changes = []
+        const newFullName = `${editUserData.firstName} ${editUserData.lastName}`
+        if (newFullName !== selectedUser.name) changes.push('name')
+        if (editUserData.email !== selectedUser.email) changes.push('email')
+        if (editUserData.role !== selectedUser.role) changes.push('role')
+        if ((editUserData.employeeNumber || '') !== (selectedUser.employeeNumber || '')) changes.push('employee number')
+
+        const changeText = changes.length ? `Updated: ${changes.join(', ')}` : 'Updated user details'
+        addNotification(createNotification({
+          type: 'user_edited',
+          title: '✏️ User Updated',
+          message: `${selectedUser.userId} — ${changeText}`,
+          priority: PRIORITY_LEVELS.ROUTINE,
+          recipientRole: USER_ROLES.ADMIN,
+          linkedEntity: { user_id: selectedUser.userId },
+          autoRemove: false
+        }))
+      } catch (err) {
+        // non-fatal - do not block UI if notification fails
+        console.error('Notification error after editing user:', err)
+      }
       await loadUsers()
       setIsEditingUser(false)
       setShowUserDetailModal(false)
@@ -272,27 +308,77 @@ const AdminPage = () => {
       setEmail('')
       setEmployeeNumber('')
       setDateOfBirth('')
+      // Notification for created account
+      addNotification(createNotification({
+        type: 'user_created',
+        title: '✅ Account Created',
+        message: `Account ${userId} (${firstName} ${lastName}) was created.`,
+        priority: PRIORITY_LEVELS.ROUTINE,
+        recipientRole: USER_ROLES.ADMIN,
+        linkedEntity: { user_id: userId },
+        actionLink: `/admin`,
+        autoRemove: false
+      }))
     } catch (error) {
       console.error('Generate account error:', error)
-      
-      // Check for specific error types
-      let userFriendlyMessage = error.message
-      
+      // Handle specific cases first (email rate limiting)
+      const msg = (error && error.message) ? String(error.message).toLowerCase() : ''
+      if (msg.includes('rate') || msg.includes('rate limit') || msg.includes('email rate')) {
+        try {
+          // Try to find the user record in the DB by email — in some cases the user was created
+          const { data: existingUser, error: fetchUserError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single()
+
+          if (!fetchUserError && existingUser) {
+            setNewUserCredentials({
+              userId: existingUser.user_id || existingUser.userId || 'N/A',
+              name: `${existingUser.first_name || ''} ${existingUser.last_name || ''}`.trim(),
+              email: existingUser.email,
+              password: existingUser.plain_password || 'N/A'
+            })
+            setShowSuccessModal(true)
+            setShowAddAccountModal(false)
+
+            addNotification(createNotification({
+              type: 'user_creation_email_rate_limited',
+              title: '⚠️ Email Rate Limited',
+              message: `Account ${existingUser.user_id || existingUser.userId} was created but verification email was not sent (rate limit). Copy credentials and notify the user manually.`,
+              priority: PRIORITY_LEVELS.URGENT,
+              recipientRole: USER_ROLES.ADMIN,
+              linkedEntity: { user_id: existingUser.user_id || existingUser.userId },
+              autoRemove: false
+            }))
+            // Reload users to reflect the new user if present
+            await loadUsers()
+            setLoading(false)
+            return
+          }
+        } catch (innerErr) {
+          console.error('Error handling rate-limit fallback:', innerErr)
+        }
+        // If we couldn't find the user record, fall through to show the generic error modal
+      }
+
+      // Check for specific error types and show a friendly message
+      let userFriendlyMessage = (error && error.message) ? String(error.message) : 'Failed to create account'
       // Check for duplicate/already registered email
-      if (error.message.includes('duplicate') || 
-          error.message.includes('already exists') ||
-          error.message.includes('already registered') ||
-          error.message.includes('User already registered') ||
+      if (userFriendlyMessage.toLowerCase().includes('duplicate') || 
+          userFriendlyMessage.toLowerCase().includes('already exists') ||
+          userFriendlyMessage.toLowerCase().includes('already registered') ||
+          userFriendlyMessage.toLowerCase().includes('user already registered') ||
           error.code === '23505') {
         userFriendlyMessage = `The email "${email}" has already been registered. Please use a different email address.`
       } 
       // Check for invalid email format
-      else if (error.message.includes('invalid email') || error.message.includes('badly formatted')) {
+      else if (userFriendlyMessage.toLowerCase().includes('invalid email') || userFriendlyMessage.toLowerCase().includes('badly formatted')) {
         userFriendlyMessage = `The email address "${email}" is invalid. Please check the format and try again.`
       }
       // Generic error
       else {
-        userFriendlyMessage = `Failed to create account: ${error.message}`
+        userFriendlyMessage = `Failed to create account: ${userFriendlyMessage}`
       }
       
       setErrorMessage(userFriendlyMessage)
@@ -322,6 +408,14 @@ const AdminPage = () => {
       if (error) throw error
       
       showMessage('success', 'All users deleted successfully (except your account)')
+      addNotification(createNotification({
+        type: 'all_users_deleted',
+        title: '🧨 All Users Deleted',
+        message: 'All user accounts were deleted (except your account).',
+        priority: PRIORITY_LEVELS.URGENT,
+        recipientRole: USER_ROLES.ADMIN,
+        autoRemove: false
+      }))
     } catch (error) {
       console.error('Delete users error:', error)
       showMessage('error', `Failed to delete users: ${error.message}`)
@@ -359,6 +453,14 @@ const AdminPage = () => {
       }
       
       showMessage('success', 'All studies deleted successfully')
+      addNotification(createNotification({
+        type: 'all_studies_deleted',
+        title: '🧨 Studies Deleted',
+        message: 'All studies were deleted from the database.',
+        priority: PRIORITY_LEVELS.URGENT,
+        recipientRole: USER_ROLES.ADMIN,
+        autoRemove: false
+      }))
     } catch (error) {
       console.error('Delete studies error:', error)
       showMessage('error', `Failed to delete studies: ${error.message}`)
@@ -416,6 +518,14 @@ const AdminPage = () => {
           setTimeout(() => {
             window.location.reload()
           }, 1000)
+          addNotification(createNotification({
+            type: 'all_reports_deleted',
+            title: '🧨 Reports Deleted',
+            message: `Deleted ${deletedCount} report(s) from the system.`,
+            priority: PRIORITY_LEVELS.URGENT,
+            recipientRole: USER_ROLES.ADMIN,
+            autoRemove: false
+          }))
         }
       } else {
         showMessage('success', 'No reports to delete')
@@ -488,6 +598,14 @@ const AdminPage = () => {
       }
       
       showMessage('success', 'All patients deleted successfully')
+      addNotification(createNotification({
+        type: 'all_patients_deleted',
+        title: '🧨 Patients Deleted',
+        message: 'All patient records were deleted from the database.',
+        priority: PRIORITY_LEVELS.URGENT,
+        recipientRole: USER_ROLES.ADMIN,
+        autoRemove: false
+      }))
     } catch (error) {
       console.error('Delete patients error:', error)
       showMessage('error', `Failed to delete patients: ${error.message}`)
