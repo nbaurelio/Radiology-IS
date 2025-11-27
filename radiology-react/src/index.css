@@ -54,7 +54,7 @@ body::before{
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.22; /* increased for better visibility; tweak this value as needed */
+  opacity: 0.36; /* increased for stronger visibility; tweak this value as needed */
   pointer-events: none;
   z-index: 0;
 }
@@ -64,6 +64,26 @@ body::before{
   position: relative;
   z-index: 1;
 }
+
+/* Footer */
+.app-footer{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  background: var(--brand);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+}
+.app-footer-inner{ max-width:1400px; width:100%; padding:0 24px; display:flex; justify-content:center; }
+
+/* Prevent content from being obscured by fixed footer */
+.app-root{ padding-bottom: 64px; }
 
 /* Top Navbar */
 .topnav{

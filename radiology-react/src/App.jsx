@@ -45,6 +45,12 @@ function App() {
                 </Route>
               </Route>
             </Routes>
+            {/* Footer placed inside app-root so it sits above background layer */}
+            <footer className="app-footer">
+              <div className="app-footer-inner">
+                <span>© {new Date().getFullYear()} XferDx — All rights reserved.</span>
+              </div>
+            </footer>
           </div>
         </Router>
       </NotificationProvider>
