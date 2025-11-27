@@ -103,18 +103,34 @@ const Header = () => {
     return titles[pathname] || 'Dashboard'
   }
 
-  // Build navigation items
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/upload', label: 'Upload DICOM' },
-    { path: '/reports', label: 'Reports' },
-    { path: '/telehealth', label: 'Telehealth' },
-    { path: '/patients', label: 'Patients' }
-  ]
-
-  // Add Admin tab only for Administrator users
-  if (user?.userType === 'Hospital Admin' || user?.userType === 'Administrator') {
-    navItems.push({ path: '/admin', label: 'Admin' })
+  // Get navigation items based on user role
+  const getNavItems = () => {
+    if (!user) return [{ path: '/dashboard', label: 'Dashboard' }]
+    
+    const role = user.userType || 'Rad Tech' // Default to Rad Tech if not set
+    
+    // Define tabs for each role
+    const roleTabs = {
+      'Hospital Admin': [
+        { path: '/dashboard', label: 'Dashboard' },
+        { path: '/upload', label: 'Upload DICOM' },
+        { path: '/reports', label: 'Reports' },
+        { path: '/patients', label: 'Patients' },
+        { path: '/telehealth', label: 'Telehealth' },
+        { path: '/admin', label: 'Admin' }
+      ],
+      'Radiologist': [
+        { path: '/dashboard', label: 'Dashboard' },
+        { path: '/reports', label: 'Reports' }
+      ],
+      'Rad Tech': [
+        { path: '/dashboard', label: 'Dashboard' },
+        { path: '/upload', label: 'Upload DICOM' },
+        { path: '/patients', label: 'Patients' }
+      ]
+    }
+    
+    return roleTabs[role] || []
   }
 
   return (
@@ -148,7 +164,7 @@ const Header = () => {
       </div>
 
       <nav className="tabs" aria-label="Primary" ref={tabsRef}>
-        {navItems.map((item) => (
+        {getNavItems().map((item) => (
           <Link
             key={item.path}
             to={item.path}
