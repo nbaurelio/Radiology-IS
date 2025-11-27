@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { studyService } from '../services/studyService'
 import { patientService } from '../services/patientService'
+import { useNotifications } from '../contexts/NotificationContext'
+import { notifyUploadSuccess, notifyUploadFailed, notifyStudyValidated } from '../services/notificationService'
 
 const UploadDicom = () => {
+  const navigate = useNavigate()
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState([])
@@ -11,6 +15,7 @@ const UploadDicom = () => {
   const [clinicalHistory, setClinicalHistory] = useState('')
   const [examPriority, setExamPriority] = useState('routine')
   const [dragActive, setDragActive] = useState(false)
+  const { addNotification } = useNotifications()
 
   useEffect(() => {
     loadPatients()
@@ -163,6 +168,32 @@ const UploadDicom = () => {
           }
           message += `Total: ${totalUploaded}/${totalFiles}`
           alert(message)
+
+          // Get patient name
+          const patient = patients.find(p => p.id === selectedPatient)
+          const patientName = patient ? `${patient.first_name} ${patient.last_name}` : 'Unknown'
+
+          // Send notification
+          const notif = notifyUploadSuccess({
+            study_id: result.study.study_id,
+            patient_id: result.study.patient_uuid,
+            patient_name: patientName,
+            modality: 'CT', // You can make this dynamic based on form
+            exam_type: 'General Study'
+          })
+          addNotification(notif)
+
+          // Also notify about validation
+          setTimeout(() => {
+            const validationNotif = notifyStudyValidated({
+              study_id: result.study.study_id,
+              patient_id: result.study.patient_uuid,
+              patient_name: patientName,
+              modality: 'CT',
+              exam_type: 'General Study'
+            })
+            addNotification(validationNotif)
+          }, 1000)
         } else {
           let errorMessage = `Study created but file upload had issues:\n`
           if (selectedFiles.length > 0) {
@@ -172,6 +203,20 @@ const UploadDicom = () => {
             errorMessage += `Additional: ${additionalUploadResult.message}`
           }
           alert(errorMessage)
+
+          // Get patient name
+          const patient = patients.find(p => p.id === selectedPatient)
+          const patientName = patient ? `${patient.first_name} ${patient.last_name}` : 'Unknown'
+
+          // Send error notification
+          const errorNotif = notifyUploadFailed(
+            {
+              patient_id: result.study.patient_uuid,
+              patient_name: patientName
+            },
+            'Some files failed to upload. Please check the file formats.'
+          )
+          addNotification(errorNotif)
         }
         
         // Reset form
@@ -181,14 +226,28 @@ const UploadDicom = () => {
         setClinicalHistory('')
         setExamPriority('routine')
         
-        // Navigate to dashboard
-        window.location.href = '/dashboard'
+        // Navigate to dashboard using React Router
+        navigate('/dashboard')
       } else {
         alert(`Error uploading study: ${result.message}`)
+        
+        // Send error notification
+        const errorNotif = notifyUploadFailed(
+          { patient_id: selectedPatient, patient_name: 'Unknown' },
+          result.message
+        )
+        addNotification(errorNotif)
       }
     } catch (error) {
       console.error('Upload error:', error)
       alert('An error occurred while uploading. Please try again.')
+      
+      // Send error notification
+      const errorNotif = notifyUploadFailed(
+        { patient_id: selectedPatient, patient_name: 'Unknown' },
+        error.message || 'An unexpected error occurred'
+      )
+      addNotification(errorNotif)
     } finally {
       setLoading(false)
     }

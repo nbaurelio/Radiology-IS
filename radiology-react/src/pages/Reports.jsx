@@ -3,9 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
 import { reportService } from '../services/reportService'
 import { studyService } from '../services/studyService'
+import { useNotifications } from '../contexts/NotificationContext'
+import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
 const Reports = () => {
   const navigate = useNavigate()
+  const { addNotification } = useNotifications()
   const [reports, setReports] = useState([])
   const [pendingStudies, setPendingStudies] = useState([])
   const [loading, setLoading] = useState(true)
@@ -96,14 +99,35 @@ const Reports = () => {
       const result = await reportService.deleteReport(reportToDelete.id)
       
       if (result.success) {
-        alert('Report deleted successfully')
+        addNotification(createNotification({
+          type: 'report_deleted',
+          title: '🗑️ Report Deleted',
+          message: `Report for study ${reportToDelete.study_id} has been successfully deleted.`,
+          priority: PRIORITY_LEVELS.ROUTINE,
+          recipientRole: USER_ROLES.RADIOLOGIST,
+          autoRemove: false
+        }))
         await loadReports()
       } else {
-        alert(`Error deleting report: ${result.message}`)
+        addNotification(createNotification({
+          type: 'report_delete_failed',
+          title: '❌ Delete Failed',
+          message: `Failed to delete report: ${result.message}`,
+          priority: PRIORITY_LEVELS.URGENT,
+          recipientRole: USER_ROLES.RADIOLOGIST,
+          autoRemove: false
+        }))
       }
     } catch (error) {
       console.error('Delete error:', error)
-      alert('An error occurred while deleting the report')
+      addNotification(createNotification({
+        type: 'report_delete_failed',
+        title: '❌ Delete Error',
+        message: 'An error occurred while deleting the report. Please try again.',
+        priority: PRIORITY_LEVELS.URGENT,
+        recipientRole: USER_ROLES.RADIOLOGIST,
+        autoRemove: false
+      }))
     } finally {
       setLoading(false)
       setDeleteConfirmModal(false)

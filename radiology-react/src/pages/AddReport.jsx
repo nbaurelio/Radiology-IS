@@ -3,10 +3,13 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { reportService } from '../services/reportService'
 import { studyService } from '../services/studyService'
 import { ArrowLeft, Save } from 'lucide-react'
+import { useNotifications } from '../contexts/NotificationContext'
+import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
 const AddReport = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { addNotification } = useNotifications()
   const [loading, setLoading] = useState(false)
   const [patients, setPatients] = useState([])
   const [studyId, setStudyId] = useState('')
@@ -76,7 +79,7 @@ const AddReport = () => {
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-      window.location.href = '/reports'
+      navigate('/reports')
     }
   }
 
@@ -101,14 +104,37 @@ const AddReport = () => {
           await studyService.updateStudyStatus(studyData.id, statusToSet)
         }
         
-        alert('Report created successfully!')
+        addNotification(createNotification({
+          type: 'report_created',
+          title: '✅ Report Created',
+          message: `Report created for study ${studyId || 'N/A'}. Status: ${reportData.status}.`,
+          priority: PRIORITY_LEVELS.ROUTINE,
+          recipientRole: USER_ROLES.RADIOLOGIST,
+          linkedEntity: { study_id: studyId },
+          actionLink: `/reports`,
+          autoRemove: false
+        }))
         navigate('/reports')
       } else {
-        alert(`Error creating report: ${result.message}`)
+        addNotification(createNotification({
+          type: 'report_creation_failed',
+          title: '❌ Report Creation Failed',
+          message: `Error creating report: ${result.message}`,
+          priority: PRIORITY_LEVELS.URGENT,
+          recipientRole: USER_ROLES.RADIOLOGIST,
+          autoRemove: false
+        }))
       }
     } catch (error) {
       console.error('Error:', error)
-      alert('An unexpected error occurred. Please try again.')
+      addNotification(createNotification({
+        type: 'report_creation_failed',
+        title: '❌ Error',
+        message: 'An unexpected error occurred while creating the report. Please try again.',
+        priority: PRIORITY_LEVELS.URGENT,
+        recipientRole: USER_ROLES.RADIOLOGIST,
+        autoRemove: false
+      }))
     } finally {
       setLoading(false)
     }

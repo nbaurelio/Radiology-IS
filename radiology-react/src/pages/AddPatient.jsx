@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { patientService } from '../services/patientService'
+import { useNotifications } from '../contexts/NotificationContext'
+import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
 const AddPatient = () => {
   const [patientId, setPatientId] = useState('')
   const [loading, setLoading] = useState(false)
   const [mrnNumber, setMrnNumber] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const { addNotification } = useNotifications()
+  const navigate = useNavigate()
 
   useEffect(() => {
     loadPatientId()
@@ -24,7 +28,7 @@ const AddPatient = () => {
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-      window.location.href = '/patients'
+      navigate('/patients')
     }
   }
 
@@ -56,13 +60,50 @@ const AddPatient = () => {
       
       if (result.success) {
         alert('Patient profile created successfully!')
-        window.location.href = '/patients'
+        
+        // Send success notification
+        const notification = createNotification({
+          type: 'patient_created',
+          title: '✅ Patient Added',
+          message: `Patient ${firstName} ${lastName} (ID: ${patientData.patient_id}) has been successfully created.`,
+          priority: PRIORITY_LEVELS.ROUTINE,
+          recipientRole: USER_ROLES.ADMIN,
+          linkedEntity: { patient_id: patientData.patient_id },
+          actionLink: `/patients/${result.patient.id}`,
+          autoRemove: false
+        })
+        addNotification(notification)
+        
+        // Navigate without full page reload to preserve notification state
+        navigate('/patients')
       } else {
         alert(`Error creating patient: ${result.message}`)
+        
+        // Send error notification
+        const errorNotification = createNotification({
+          type: 'patient_creation_failed',
+          title: '❌ Patient Creation Failed',
+          message: `Failed to create patient: ${result.message}`,
+          priority: PRIORITY_LEVELS.URGENT,
+          recipientRole: USER_ROLES.ADMIN,
+          autoRemove: false
+        })
+        addNotification(errorNotification)
       }
     } catch (error) {
       console.error('Error:', error)
       alert('An unexpected error occurred. Please try again.')
+      
+      // Send error notification
+      const errorNotification = createNotification({
+        type: 'patient_creation_error',
+        title: '⚠️ Unexpected Error',
+        message: `An unexpected error occurred while creating the patient: ${error.message}`,
+        priority: PRIORITY_LEVELS.URGENT,
+        recipientRole: USER_ROLES.ADMIN,
+        autoRemove: false
+      })
+      addNotification(errorNotification)
     } finally {
       setLoading(false)
     }

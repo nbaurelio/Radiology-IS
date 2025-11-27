@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
 import { patientService } from '../services/patientService'
+import { useNotifications } from '../contexts/NotificationContext'
+import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
 const Patients = () => {
   const [patients, setPatients] = useState([])
@@ -10,6 +12,7 @@ const Patients = () => {
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
   const [patientToDelete, setPatientToDelete] = useState(null)
+  const { addNotification } = useNotifications()
 
   useEffect(() => {
     loadPatients()
@@ -73,14 +76,35 @@ const Patients = () => {
       const result = await patientService.deletePatient(patientToDelete.id)
       
       if (result.success) {
-        alert('Patient deleted successfully')
+        addNotification(createNotification({
+          type: 'patient_deleted',
+          title: '🗑️ Patient Deleted',
+          message: `Patient ${patientToDelete.first_name} ${patientToDelete.last_name} (ID: ${patientToDelete.patient_id}) has been successfully deleted.`,
+          priority: PRIORITY_LEVELS.ROUTINE,
+          recipientRole: USER_ROLES.ADMIN,
+          autoRemove: false
+        }))
         await loadPatients()
       } else {
-        alert(`Error deleting patient: ${result.message}`)
+        addNotification(createNotification({
+          type: 'patient_delete_failed',
+          title: '❌ Delete Failed',
+          message: `Failed to delete patient: ${result.message}`,
+          priority: PRIORITY_LEVELS.URGENT,
+          recipientRole: USER_ROLES.ADMIN,
+          autoRemove: false
+        }))
       }
     } catch (error) {
       console.error('Delete error:', error)
-      alert('An error occurred while deleting the patient')
+      addNotification(createNotification({
+        type: 'patient_delete_failed',
+        title: '❌ Delete Error',
+        message: 'An error occurred while deleting the patient. Please try again.',
+        priority: PRIORITY_LEVELS.URGENT,
+        recipientRole: USER_ROLES.ADMIN,
+        autoRemove: false
+      }))
     } finally {
       setLoading(false)
       setDeleteConfirmModal(false)

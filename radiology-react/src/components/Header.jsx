@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useNotifications } from '../contexts/NotificationContext'
+import { Bell } from 'lucide-react'
 
 const Header = () => {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+  const { notifications, unreadCount, markAsRead, clearAll } = useNotifications()
   const [theme, setTheme] = useState('light')
+  const [showNotifications, setShowNotifications] = useState(false)
   const tabsRef = useRef(null)
   const indicatorRef = useRef(null)
+  const notificationRef = useRef(null)
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light'
@@ -89,6 +95,53 @@ const Header = () => {
     }
   }
 
+  // Close notifications when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false)
+      }
+    }
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showNotifications])
+
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id)
+    if (notification.actionLink) {
+      // Navigate to the action link using React Router
+      setShowNotifications(false)
+      navigate(notification.actionLink)
+    }
+  }
+
+  const formatTime = (timestamp) => {
+    const now = new Date()
+    const notifTime = new Date(timestamp)
+    const diffMs = now - notifTime
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return notifTime.toLocaleDateString()
+  }
+
+  const getPriorityColor = (priority) => {
+    const colors = {
+      stat: '#ef4444',      // red
+      urgent: '#f59e0b',    // amber
+      routine: '#3b82f6'    // blue
+    }
+    return colors[priority] || colors.routine
+  }
+
   const getPageTitle = (pathname) => {
     const titles = {
       '/dashboard': 'Dashboard',
@@ -147,6 +200,65 @@ const Header = () => {
         <div className="spacer"></div>
         
         <div className="actions">
+          <div className="notification-container" ref={notificationRef}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="notification-btn"
+              aria-label="Notifications"
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="notification-badge">{unreadCount}</span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="notification-dropdown">
+                <div className="notification-header">
+                  <h3>Notifications</h3>
+                  {notifications.length > 0 && (
+                    <button 
+                      onClick={() => {
+                        clearAll()
+                        setShowNotifications(false)
+                      }}
+                      className="clear-btn"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+                
+                <div className="notification-list">
+                  {notifications.length === 0 ? (
+                    <div className="no-notifications">
+                      <p>No notifications</p>
+                    </div>
+                  ) : (
+                    notifications.map(notification => (
+                      <div 
+                        key={notification.id}
+                        className={`notification-item ${notification.status}`}
+                        onClick={() => handleNotificationClick(notification)}
+                        style={{
+                          borderLeftColor: getPriorityColor(notification.priority),
+                          borderLeftWidth: '3px'
+                        }}
+                      >
+                        <div className="notification-content">
+                          <p className="notification-title">{notification.title}</p>
+                          <p className="notification-message">{notification.message}</p>
+                          <span className="notification-time">{formatTime(notification.timestamp)}</span>
+                        </div>
+                        {notification.status === 'unread' && <div className="unread-indicator"></div>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button 
             onClick={toggleTheme}
             className="theme-toggle"
