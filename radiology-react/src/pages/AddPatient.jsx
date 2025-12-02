@@ -1,19 +1,32 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { patientService } from '../services/patientService'
+import { studyService } from '../services/studyService'
 import { useNotifications } from '../contexts/NotificationContext'
 import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
 const AddPatient = () => {
   const [patientId, setPatientId] = useState('')
+  const [studyId, setStudyId] = useState('')
   const [loading, setLoading] = useState(false)
   const [mrnNumber, setMrnNumber] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  
+  // Study Information State
+  const [examType, setExamType] = useState('general')
+  const [studyDate, setStudyDate] = useState('')
+  const [modality, setModality] = useState('')
+  const [priority, setPriority] = useState('routine')
+  const [status, setStatus] = useState('pending')
+  const [assignedRadiologist, setAssignedRadiologist] = useState('')
+  const [studyNotes, setStudyNotes] = useState('')
+  
   const { addNotification } = useNotifications()
   const navigate = useNavigate()
 
   useEffect(() => {
     loadPatientId()
+    loadStudyId()
   }, [])
 
   const loadPatientId = async () => {
@@ -24,6 +37,35 @@ const AddPatient = () => {
       console.error('Error generating patient ID:', error)
       setPatientId('Error generating ID')
     }
+  }
+
+  const loadStudyId = async () => {
+    try {
+      if (studyService && studyService.generateStudyId) {
+        const id = await studyService.generateStudyId()
+        setStudyId(id)
+      } else {
+        setStudyId('STU-XXXX')
+      }
+    } catch (error) {
+      console.error('Error generating study ID:', error)
+      setStudyId('Error')
+    }
+  }
+
+  const formatDateTimeLocal = (d = new Date()) => {
+    const pad = (n) => String(n).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    const mm = pad(d.getMonth() + 1)
+    const dd = pad(d.getDate())
+    const hh = pad(d.getHours())
+    const min = pad(d.getMinutes())
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`
+  }
+
+  const scheduleNow = () => {
+    const nowLocal = formatDateTimeLocal(new Date())
+    setStudyDate(nowLocal)
   }
 
   const handleCancel = () => {
@@ -38,27 +80,64 @@ const AddPatient = () => {
     
     const firstName = document.getElementById('firstName').value.trim()
     const lastName = document.getElementById('lastName').value.trim()
+    const now = new Date().toISOString()
     
+    // Prepare patient data
     const patientData = {
       patient_id: document.getElementById('patientId').value.trim(),
-      mrn: mrnNumber ? `MRN-${mrnNumber}` : null,
       first_name: firstName,
       last_name: lastName,
       name: `${firstName} ${lastName}`,
-      date_of_birth: document.getElementById('dateOfBirth').value || null,
       sex: document.getElementById('patientSex').value,
-      phone: phoneNumber,
+      date_of_birth: document.getElementById('dateOfBirth').value || null,
       email: document.getElementById('contactEmail').value.trim() || null,
+      phone: phoneNumber,
       address: document.getElementById('address').value.trim() || null,
+      mrn: mrnNumber ? `MRN-${mrnNumber}` : null,
       medical_history: document.getElementById('medicalHistory').value.trim() || null,
-      registration_date: new Date().toISOString(),
-      last_visit_date: null
+      registration_date: now,
+      last_visit_date: studyDate || now,
+      notes: studyNotes,
+      created_at: now,
+      updated_at: now,
+      next_appointment: studyDate || null
     }
     
     try {
       const result = await patientService.createPatient(patientData)
       
       if (result.success) {
+        // Create study record if study information is provided
+        if (examType || modality || studyDate) {
+          const studyData = {
+            study_id: studyId,
+            patient_id: result.patient.id,
+            patient_uuid: result.patient.id,
+            exam_type: examType,
+            modality: modality,
+            study_date: studyDate || now,
+            schedule: studyDate || now,
+            status: status,
+            priority: priority,
+            assigned_radiologist_id: assignedRadiologist,
+            assigned_radiologist: assignedRadiologist,
+            note_apt: studyNotes,
+            notes: studyNotes,
+            type: 'study',
+            created_at: now,
+            updated_at: now
+          }
+          
+          try {
+            const studyResult = await studyService.createStudy(studyData)
+            if (!studyResult.success) {
+              console.error('Error creating study:', studyResult.message)
+            }
+          } catch (studyError) {
+            console.error('Failed to create study:', studyError)
+            // Continue with patient creation even if study creation fails
+          }
+        }
         alert('Patient profile created successfully!')
         
         // Send success notification
@@ -297,6 +376,110 @@ const AddPatient = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Study Information (also visible when creating a patient) */}
+          <div className="form-section">
+            <h2 className="form-section-title">Study Information and Appointment Scheduling</h2>
+            <p className="form-section-subtitle">Basic information about the study and scheduling details</p>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="newStudyId">Study ID</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">receipt_long</span>
+                  <input
+                    type="text"
+                    id="newStudyId"
+                    className="form-input"
+                    value={studyId}
+                    readOnly
+                    style={{paddingLeft: '40px'}}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="examType">Exam Type</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">menu_book</span>
+                  <select id="examType" className="form-input" value={examType} onChange={(e) => setExamType(e.target.value)} style={{paddingLeft: '40px'}}>
+                    <option value="general">General</option>
+                    <option value="chest">Chest</option>
+                    <option value="abdo">Abdomen</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="studyDate">Study/Appointment Date</label>
+                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <div className="input-with-icon" style={{flex: 1}}>
+                    <span className="material-icons input-icon">event</span>
+                    <input type="datetime-local" id="studyDate" className="form-input" value={studyDate} onChange={(e) => setStudyDate(e.target.value)} style={{paddingLeft: '40px'}} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="modality">Modality</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">science</span>
+                  <select id="modality" className="form-input" value={modality} onChange={(e) => setModality(e.target.value)} style={{paddingLeft: '40px'}}>
+                    <option value="">Select modality</option>
+                    <option value="ct">CT</option>
+                    <option value="mr">MR</option>
+                    <option value="xr">XR</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="priority">Priority</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">priority_high</span>
+                  <select id="priority" className="form-input" value={priority} onChange={(e) => setPriority(e.target.value)} style={{paddingLeft: '40px'}}>
+                    <option value="routine">Routine</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="stat">STAT</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="status">Status</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">info</span>
+                  <select id="status" className="form-input" value={status} onChange={(e) => setStatus(e.target.value)} style={{paddingLeft: '40px'}}>
+                    <option value="pending">Pending</option>
+                    <option value="reading">Reading</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="assignedRadiologist">Assigned Radiologist</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">person</span>
+                  <input type="text" id="assignedRadiologist" className="form-input" value={assignedRadiologist} onChange={(e) => setAssignedRadiologist(e.target.value)} placeholder="Ex: Dr. Smith" style={{paddingLeft: '40px'}} />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label htmlFor="studyNotes">Notes</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon" style={{top: '12px'}}>notes</span>
+                  <textarea id="studyNotes" className="form-input" value={studyNotes} onChange={(e) => setStudyNotes(e.target.value)} placeholder="Any relevant notes about the study" style={{paddingLeft: '40px'}} />
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Form Actions */}

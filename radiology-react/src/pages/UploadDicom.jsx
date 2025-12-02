@@ -387,47 +387,7 @@ const UploadDicom = () => {
             )}
           </div>
 
-          {/* Study Metadata Section */}
-          <div className="form-section">
-            <h2 className="form-section-title">Study Details</h2>
-            <p className="form-section-subtitle">Additional information about the study</p>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="clinicalHistory">Clinical History</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">notes</span>
-                  <input 
-                    type="text" 
-                    id="clinicalHistory" 
-                    className="form-input" 
-                    placeholder="Ex: Suspected pneumonia"
-                    value={clinicalHistory}
-                    onChange={(e) => setClinicalHistory(e.target.value)}
-                    style={{paddingLeft: '40px'}}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="examPriority">Exam Priority <span className="required">*</span></label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">priority_high</span>
-                  <select 
-                    id="examPriority" 
-                    className="form-input" 
-                    required
-                    value={examPriority}
-                    onChange={(e) => setExamPriority(e.target.value)}
-                    style={{paddingLeft: '40px'}}
-                  >
-                    <option value="routine">Routine</option>
-                    <option value="urgent">Urgent</option>
-                    <option value="stat">STAT</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Study Details section removed per request */}
 
           {/* Action Buttons */}
           <div className="form-actions">

@@ -75,6 +75,37 @@ const Dashboard = () => {
     return 'badge-done'
   }
 
+  // Generate a small numeric series ending with `value` for a simple sparkline
+  const makeSeries = (value, length = 6) => {
+    const base = Math.max(0, Math.round(value / Math.max(1, length)));
+    const series = []
+    for (let i = 0; i < length; i++) {
+      // progressively increase values so the last point equals `value`
+      const factor = 0.4 + (i / (length - 1)) * 0.6
+      series.push(Math.round(base * factor * length))
+    }
+    // Ensure final value is the actual value (or at least close)
+    series[series.length - 1] = Math.round(value)
+    return series
+  }
+
+  // Build an SVG path string for a sparkline given numeric `values`
+  const buildSparklinePath = (values, w = 140, h = 36, pad = 4) => {
+    if (!values || values.length === 0) return ''
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    const range = max - min || 1
+    const step = (w - pad * 2) / Math.max(1, values.length - 1)
+    const points = values.map((v, i) => {
+      const x = pad + i * step
+      const y = pad + (1 - (v - min) / range) * (h - pad * 2)
+      return `${x},${y}`
+    })
+    const lineD = `M${points.join(' L')}`
+    const fillD = `${lineD} L ${w - pad},${h - pad} L ${pad},${h - pad} Z`
+    return { lineD, fillD }
+  }
+
   return (
     <section className="grid">
       {/* Welcome */}
@@ -100,7 +131,7 @@ const Dashboard = () => {
               stats.totalStudies.toLocaleString()
             )}
           </div>
-          <div className="mini-chart" aria-hidden="true"></div>
+          {/* mini-chart removed */}
         </article>
 
         <article className="card metric">
@@ -112,7 +143,7 @@ const Dashboard = () => {
               stats.pendingReads.toLocaleString()
             )}
           </div>
-          <div className="mini-chart" aria-hidden="true"></div>
+          {/* mini-chart removed */}
         </article>
 
         <article className="card metric">
@@ -124,7 +155,7 @@ const Dashboard = () => {
               stats.urgentStudies.toLocaleString()
             )}
           </div>
-          <div className="mini-chart" aria-hidden="true"></div>
+          {/* mini-chart removed */}
         </article>
 
         <article className="card metric">
@@ -136,45 +167,11 @@ const Dashboard = () => {
               stats.activePatients.toLocaleString()
             )}
           </div>
-          <div className="mini-chart" aria-hidden="true"></div>
+          {/* mini-chart removed */}
         </article>
       </section>
 
-      {/* Overview / chart */}
-      <article className="card overview">
-        <div className="hd">Revenue Overview</div>
-        <div className="bd">
-          <div className="kpi" style={{marginBottom:'10px'}}>
-            <div className="item"><span className="muted">This month</span><b>$75,689</b></div>
-            <div className="item"><span className="muted">Last month</span><b>$59,724</b></div>
-            <div className="item"><span className="muted">Average</span><b>$66,561</b></div>
-          </div>
-
-          <svg className="chart" viewBox="0 0 600 180" role="img" aria-label="Revenue trend">
-            <defs>
-              <linearGradient id="fillA" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.35"/>
-                <stop offset="100%" stopColor="var(--brand)" stopOpacity="0"/>
-              </linearGradient>
-            </defs>
-            <rect width="600" height="180" fill="none" stroke="var(--line)"/>
-            <g stroke="var(--line)" strokeWidth="1" opacity=".8">
-              <line x1="0" y1="40" x2="600" y2="40"/>
-              <line x1="0" y1="80" x2="600" y2="80"/>
-              <line x1="0" y1="120" x2="600" y2="120"/>
-            </g>
-            <path d="M0,130 L30,115 60,128 90,90 120,110 150,85 180,92 210,70 240,80 270,65 300,78 330,60 360,75 390,68 420,82 450,72 480,89 510,95 540,85 570,92 600,88 L600,180 L0,180 Z"
-                  fill="url(#fillA)"/>
-            <path d="M0,130 L30,115 60,128 90,90 120,110 150,85 180,92 210,70 240,80 270,65 300,78 330,60 360,75 390,68 420,82 450,72 480,89 510,95 540,85 570,92 600,88"
-                  fill="none" stroke="var(--brand)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-
-          <div className="legend" style={{marginTop:'10px'}}>
-            <span className="dot"></span><span className="muted">Returning</span>
-            <span className="dot alt"></span><span className="muted">Newcomers</span>
-          </div>
-        </div>
-      </article>
+      {/* Revenue Overview card removed as requested */}
 
       {/* Recent Studies */}
       <article className="card table-card">
