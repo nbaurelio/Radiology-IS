@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
 import { patientService } from '../services/patientService'
+import { studyService } from '../services/studyService'
 import { useNotifications } from '../contexts/NotificationContext'
 import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
@@ -13,6 +14,15 @@ const Patients = () => {
   const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
   const [patientToDelete, setPatientToDelete] = useState(null)
   const { addNotification } = useNotifications()
+
+  // Schedule Appointment Modal States
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [selectedPatient, setSelectedPatient] = useState(null)
+  const [studyId, setStudyId] = useState('')
+  const [studyDate, setStudyDate] = useState('')
+  const [priority, setPriority] = useState('routine')
+  const [clinicalHistory, setClinicalHistory] = useState('')
+  const [scheduling, setScheduling] = useState(false)
 
   useEffect(() => {
     loadPatients()
@@ -117,6 +127,111 @@ const Patients = () => {
     setPatientToDelete(null)
   }
 
+  // Schedule Appointment Functions
+  const handleScheduleAppointmentClick = async () => {
+    setShowScheduleModal(true)
+    // Generate study ID when modal opens
+    const generatedId = await studyService.generateStudyId()
+    setStudyId(generatedId)
+  }
+
+  const handlePatientSelect = (e) => {
+    const patientId = e.target.value
+    if (patientId) {
+      const patient = patients.find(p => p.id === patientId)
+      setSelectedPatient(patient)
+    } else {
+      setSelectedPatient(null)
+    }
+  }
+
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault()
+    if (!selectedPatient) {
+      alert('Please select a patient')
+      return
+    }
+
+    setScheduling(true)
+
+    const currentUser = JSON.parse(localStorage.getItem('userSession') || '{}')
+    const now = new Date().toISOString()
+
+    const studyData = {
+      study_id: studyId,
+      patient_uuid: selectedPatient.id,
+      clinical_history: clinicalHistory || 'No clinical history provided',
+      priority: priority,
+      status: 'pending',
+      dicom_files: [],
+      created_by: currentUser?.id || null,
+      created_at: now,
+      updated_at: now
+    }
+
+    try {
+      const result = await studyService.createStudy(studyData)
+      
+      if (result.success) {
+        // Update patient's next_appointment
+        await patientService.updatePatient(selectedPatient.id, {
+          next_appointment: studyDate || now,
+          last_visit_date: now
+        })
+
+        addNotification(createNotification({
+          type: 'study_created',
+          title: '✅ Appointment Scheduled',
+          message: `Appointment ${studyId} has been scheduled for ${selectedPatient.first_name} ${selectedPatient.last_name}`,
+          priority: priority === 'stat' ? PRIORITY_LEVELS.URGENT : PRIORITY_LEVELS.ROUTINE,
+          recipientRole: USER_ROLES.ADMIN,
+          linkedEntity: { study_id: studyId, patient_id: selectedPatient.patient_id },
+          actionLink: `/studies/${result.study.id}`,
+          autoRemove: false
+        }))
+
+        alert('Appointment scheduled successfully!')
+        
+        // Reset form and close modal
+        setShowScheduleModal(false)
+        setSelectedPatient(null)
+        setStudyDate('')
+        setPriority('routine')
+        setClinicalHistory('')
+        
+        // Reload patients to show updated next appointment
+        await loadPatients()
+      } else {
+        alert(`Failed to schedule appointment: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Error scheduling appointment:', error)
+      alert('An unexpected error occurred. Please try again.')
+    } finally {
+      setScheduling(false)
+    }
+  }
+
+  const handleCancelSchedule = () => {
+    setShowScheduleModal(false)
+    setSelectedPatient(null)
+    setStudyDate('')
+    setPriority('routine')
+    setClinicalHistory('')
+  }
+
+  const calculateAge = (dob) => {
+    if (!dob) return 'N/A'
+    const birthDate = new Date(dob)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
   const formatAppointment = (appointment) => {
     if (!appointment) {
       return <span className="badge badge-no-appointment">No Appointment</span>
@@ -156,13 +271,31 @@ const Patients = () => {
             placeholder="Search patients by name, ID, or exam type..." 
           />
         </div>
-        <button 
-          className="add-patient-btn" 
-          onClick={() => window.location.href = '/patients/add'}
-          aria-label="Add Patient"
-        >
-          <span className="plus-icon">+</span>
-        </button>
+        <div style={{display: 'flex', gap: '12px'}}>
+          <button 
+            className="add-patient-btn" 
+            onClick={handleScheduleAppointmentClick}
+            aria-label="Schedule Appointment"
+            style={{
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0 20px'
+            }}
+            title="Schedule Appointment"
+          >
+            <span className="material-icons" style={{fontSize: '20px'}}>event_available</span>
+            <span style={{fontSize: '14px', fontWeight: '600'}}>Schedule</span>
+          </button>
+          <button 
+            className="add-patient-btn" 
+            onClick={() => window.location.href = '/patients/add'}
+            aria-label="Add Patient"
+          >
+            <span className="plus-icon">+</span>
+          </button>
+        </div>
       </article>
 
       {/* Patients List */}
@@ -246,6 +379,201 @@ const Patients = () => {
           </div>
         </div>
       </article>
+
+      {/* Schedule Appointment Modal */}
+      {showScheduleModal && (
+        <div className="modal" style={{display: 'flex', padding: '80px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '700px', margin: 'auto'}}>
+            <div className="modal-header">
+              <div>
+                <h2>Schedule Appointment</h2>
+                <p className="modal-subtitle">Select a patient and schedule a new appointment</p>
+              </div>
+              <button className="close-btn" onClick={handleCancelSchedule}>&times;</button>
+            </div>
+            <div className="modal-body" style={{padding: '24px'}}>
+              <form onSubmit={handleScheduleSubmit}>
+                {/* Patient Selection */}
+                <div style={{marginBottom: '20px'}}>
+                  <label style={{display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px'}}>
+                    Select Patient <span style={{color: '#ef4444'}}>*</span>
+                  </label>
+                  <select 
+                    className="form-input" 
+                    value={selectedPatient?.id || ''} 
+                    onChange={handlePatientSelect}
+                    required
+                    style={{width: '100%'}}
+                  >
+                    <option value="">-- Select a patient --</option>
+                    {patients.map(patient => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.patient_id} - {patient.first_name} {patient.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Patient Details (shown when patient is selected) */}
+                {selectedPatient && (
+                  <div style={{
+                    background: '#f3f4f6',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '20px'
+                  }}>
+                    <h3 style={{margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#374151'}}>
+                      Patient Information
+                    </h3>
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px'}}>
+                      <div>
+                        <span style={{color: '#6b7280', fontWeight: '500'}}>Name:</span>{' '}
+                        <span style={{color: '#111827'}}>{selectedPatient.first_name} {selectedPatient.last_name}</span>
+                      </div>
+                      <div>
+                        <span style={{color: '#6b7280', fontWeight: '500'}}>Patient ID:</span>{' '}
+                        <span style={{color: '#111827'}}>{selectedPatient.patient_id}</span>
+                      </div>
+                      <div>
+                        <span style={{color: '#6b7280', fontWeight: '500'}}>Age:</span>{' '}
+                        <span style={{color: '#111827'}}>{calculateAge(selectedPatient.date_of_birth)} years</span>
+                      </div>
+                      <div>
+                        <span style={{color: '#6b7280', fontWeight: '500'}}>Sex:</span>{' '}
+                        <span style={{color: '#111827'}}>{selectedPatient.sex ? selectedPatient.sex.charAt(0).toUpperCase() + selectedPatient.sex.slice(1) : 'N/A'}</span>
+                      </div>
+                      <div style={{gridColumn: '1 / -1'}}>
+                        <span style={{color: '#6b7280', fontWeight: '500'}}>Contact:</span>{' '}
+                        <span style={{color: '#111827'}}>{selectedPatient.phone || selectedPatient.email || 'N/A'}</span>
+                      </div>
+                      {selectedPatient.medical_history && (
+                        <div style={{gridColumn: '1 / -1', marginTop: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb'}}>
+                          <span style={{color: '#6b7280', fontWeight: '500', display: 'block', marginBottom: '6px'}}>Medical History:</span>
+                          <div style={{
+                            color: '#111827', 
+                            fontSize: '12px', 
+                            lineHeight: '1.6',
+                            maxHeight: '80px',
+                            overflowY: 'auto',
+                            padding: '8px',
+                            background: 'white',
+                            borderRadius: '4px',
+                            border: '1px solid #e5e7eb'
+                          }}>
+                            {selectedPatient.medical_history}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Study Details */}
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px'}}>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Study ID
+                    </label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={studyId}
+                      readOnly
+                      style={{background: '#f3f4f6', cursor: 'not-allowed'}}
+                    />
+                  </div>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Priority <span style={{color: '#ef4444'}}>*</span>
+                    </label>
+                    <select 
+                      className="form-input" 
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                      required
+                    >
+                      <option value="routine">Routine</option>
+                      <option value="urgent">Urgent</option>
+                      <option value="stat">STAT</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{marginBottom: '20px'}}>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Appointment Date & Time
+                  </label>
+                  <input 
+                    type="datetime-local" 
+                    className="form-input" 
+                    value={studyDate}
+                    onChange={(e) => setStudyDate(e.target.value)}
+                    style={{width: '100%'}}
+                  />
+                  <small style={{color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block'}}>
+                    Leave blank for immediate scheduling
+                  </small>
+                </div>
+
+                <div style={{marginBottom: '24px'}}>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Clinical History / Reason <span style={{color: '#ef4444'}}>*</span>
+                  </label>
+                  <textarea 
+                    className="form-input" 
+                    value={clinicalHistory}
+                    onChange={(e) => setClinicalHistory(e.target.value)}
+                    placeholder="Enter clinical history, symptoms, or reason for the appointment..."
+                    rows="4"
+                    style={{width: '100%'}}
+                    required
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+                  <button 
+                    type="button"
+                    onClick={handleCancelSchedule}
+                    style={{
+                      padding: '10px 24px',
+                      border: '1px solid #d1d5db',
+                      background: 'white',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={scheduling || !selectedPatient}
+                    style={{
+                      padding: '10px 24px',
+                      border: 'none',
+                      background: scheduling || !selectedPatient ? '#9ca3af' : 'linear-gradient(135deg, #10b981, #059669)',
+                      color: 'white',
+                      borderRadius: '8px',
+                      cursor: scheduling || !selectedPatient ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <span className="material-icons" style={{fontSize: '18px'}}>event_available</span>
+                    {scheduling ? 'Scheduling...' : 'Schedule Appointment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmModal && (

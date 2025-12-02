@@ -1,29 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { patientService } from '../services/patientService'
-import { studyService } from '../services/studyService'
 import { useNotifications } from '../contexts/NotificationContext'
 import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
 const AddPatient = () => {
   const [patientId, setPatientId] = useState('')
-  const [studyId, setStudyId] = useState('')
   const [loading, setLoading] = useState(false)
   const [mrnNumber, setMrnNumber] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
-  
-  // Study Information State
-  const [studyDate, setStudyDate] = useState('')
-  const [priority, setPriority] = useState('routine')
-  const [status, setStatus] = useState('pending')
-  const [studyNotes, setStudyNotes] = useState('')
   
   const { addNotification } = useNotifications()
   const navigate = useNavigate()
 
   useEffect(() => {
     loadPatientId()
-    loadStudyId()
   }, [])
 
   const loadPatientId = async () => {
@@ -34,30 +25,6 @@ const AddPatient = () => {
       console.error('Error generating patient ID:', error)
       setPatientId('Error generating ID')
     }
-  }
-
-  const loadStudyId = async () => {
-    try {
-      if (studyService && studyService.generateStudyId) {
-        const id = await studyService.generateStudyId()
-        setStudyId(id)
-      } else {
-        setStudyId('STU-XXXX')
-      }
-    } catch (error) {
-      console.error('Error generating study ID:', error)
-      setStudyId('Error')
-    }
-  }
-
-  const formatDateTimeLocal = (d = new Date()) => {
-    const pad = (n) => String(n).padStart(2, '0')
-    const yyyy = d.getFullYear()
-    const mm = pad(d.getMonth() + 1)
-    const dd = pad(d.getDate())
-    const hh = pad(d.getHours())
-    const min = pad(d.getMinutes())
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}`
   }
 
   const handleCancel = () => {
@@ -88,67 +55,17 @@ const AddPatient = () => {
       mrn: mrnNumber ? `MRN-${mrnNumber}` : null,
       medical_history: document.getElementById('medicalHistory').value.trim() || null,
       registration_date: now,
-      last_visit_date: studyDate || now,
-      notes: studyNotes,
+      last_visit_date: null,
+      notes: null,
       created_at: now,
       updated_at: now,
-      next_appointment: studyDate || null
+      next_appointment: null
     }
     
     try {
       const result = await patientService.createPatient(patientData)
       
       if (result.success) {
-        // Create study record if clinical history or study date is provided
-        // This creates a "pending study" that will show up in Reports tab
-        if (studyNotes || studyDate) {
-          const currentUser = JSON.parse(localStorage.getItem('userSession') || '{}')
-          
-          const studyData = {
-            study_id: studyId,
-            patient_uuid: result.patient.id, // UUID from created patient
-            clinical_history: studyNotes || 'Pending clinical information',
-            priority: priority || 'routine',
-            status: status || 'pending',
-            dicom_files: [], // Empty JSONB array - files added via upload later
-            created_by: currentUser?.id || null,
-            created_at: now,
-            updated_at: now
-          }
-          
-          console.log('Creating study with data:', studyData)
-          
-          try {
-            const studyResult = await studyService.createStudy(studyData)
-            if (studyResult.success) {
-              console.log('Study created successfully:', studyResult)
-              
-              // Update patient's next_appointment to reflect the new study
-              await patientService.updatePatient(result.patient.id, {
-                next_appointment: studyDate || now,
-                last_visit_date: now
-              })
-              
-              addNotification(createNotification({
-                type: 'study_created',
-                title: '📋 Study Scheduled',
-                message: `Study ${studyId} has been created for patient ${firstName} ${lastName}. Upload DICOM files to complete.`,
-                priority: priority === 'stat' ? PRIORITY_LEVELS.URGENT : PRIORITY_LEVELS.ROUTINE,
-                recipientRole: USER_ROLES.ADMIN,
-                linkedEntity: { study_id: studyId, patient_id: patientData.patient_id },
-                actionLink: `/studies/${studyResult.study.id}`,
-                autoRemove: false
-              }))
-            } else {
-              console.error('Error creating study:', studyResult.message)
-              alert(`Warning: Patient created but study creation failed: ${studyResult.message}`)
-            }
-          } catch (studyError) {
-            console.error('Failed to create study:', studyError)
-            alert(`Warning: Patient created but study creation failed. Error: ${studyError.message}`)
-          }
-        }
-        
         alert('Patient profile created successfully!')
         
         // Send success notification
@@ -164,7 +81,7 @@ const AddPatient = () => {
         })
         addNotification(notification)
         
-        // Navigate without full page reload to preserve notification state
+        // Navigate to patients list
         navigate('/patients')
       } else {
         alert(`Error creating patient: ${result.message}`)
@@ -383,107 +300,9 @@ const AddPatient = () => {
                     className="form-input" 
                     placeholder="Enter relevant medical history, conditions, allergies, etc."
                     style={{paddingLeft: '40px'}}
-                    rows="3"
+                    rows="4"
                   ></textarea>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Study Scheduling (Optional) */}
-          <div className="form-section">
-            <h2 className="form-section-title">Schedule Study (Optional)</h2>
-            <p className="form-section-subtitle">Create a pending study for this patient. DICOM files can be uploaded later.</p>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="newStudyId">Study ID</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">receipt_long</span>
-                  <input
-                    type="text"
-                    id="newStudyId"
-                    className="form-input"
-                    value={studyId}
-                    readOnly
-                    style={{paddingLeft: '40px', background: 'var(--bg)', cursor: 'not-allowed'}}
-                  />
-                </div>
-                <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
-                  Auto-generated (e.g., STU-2025-0001)
-                </small>
-              </div>
-              <div className="form-group">
-                <label htmlFor="studyDate">Appointment Date</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">event</span>
-                  <input 
-                    type="datetime-local" 
-                    id="studyDate" 
-                    className="form-input" 
-                    value={studyDate} 
-                    onChange={(e) => setStudyDate(e.target.value)} 
-                    style={{paddingLeft: '40px'}} 
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="priority">Priority</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">priority_high</span>
-                  <select 
-                    id="priority" 
-                    className="form-input" 
-                    value={priority} 
-                    onChange={(e) => setPriority(e.target.value)} 
-                    style={{paddingLeft: '40px'}}
-                  >
-                    <option value="routine">Routine</option>
-                    <option value="urgent">Urgent</option>
-                    <option value="stat">STAT</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="status">Status</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">info</span>
-                  <select 
-                    id="status" 
-                    className="form-input" 
-                    value={status} 
-                    onChange={(e) => setStatus(e.target.value)} 
-                    style={{paddingLeft: '40px'}}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="reading">Reading</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label htmlFor="studyNotes">Clinical History / Reason for Study</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon" style={{top: '12px'}}>notes</span>
-                  <textarea 
-                    id="studyNotes" 
-                    className="form-input" 
-                    value={studyNotes} 
-                    onChange={(e) => setStudyNotes(e.target.value)} 
-                    placeholder="Enter clinical history, symptoms, or reason for the study..."
-                    style={{paddingLeft: '40px'}} 
-                    rows="3" 
-                  />
-                </div>
-                <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
-                  Fill this field to create a pending study. Leave blank to skip study creation.
-                </small>
               </div>
             </div>
           </div>
