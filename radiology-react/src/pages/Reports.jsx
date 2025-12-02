@@ -16,6 +16,8 @@ const Reports = () => {
   const [searchTimeout, setSearchTimeout] = useState(null)
   const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
   const [reportToDelete, setReportToDelete] = useState(null)
+  const [showStudySelectionModal, setShowStudySelectionModal] = useState(false)
+  const [selectedStudyForReport, setSelectedStudyForReport] = useState(null)
 
   useEffect(() => {
     loadPendingStudies()
@@ -140,6 +142,28 @@ const Reports = () => {
     setReportToDelete(null)
   }
 
+  const handleAddReportClick = () => {
+    setShowStudySelectionModal(true)
+  }
+
+  const handleStudySelect = (study) => {
+    setSelectedStudyForReport(study)
+  }
+
+  const handleCreateReportFromStudy = () => {
+    if (!selectedStudyForReport) {
+      alert('Please select a study first')
+      return
+    }
+    // Navigate to AddReport page with study_id as query parameter
+    navigate(`/reports/add?study_id=${selectedStudyForReport.id}`)
+  }
+
+  const handleCancelStudySelection = () => {
+    setShowStudySelectionModal(false)
+    setSelectedStudyForReport(null)
+  }
+
   return (
     <section className="grid">
       {/* Search Bar */}
@@ -155,7 +179,7 @@ const Reports = () => {
         </div>
         <button 
           className="add-patient-btn" 
-          onClick={() => navigate('/reports/add')}
+          onClick={handleAddReportClick}
           aria-label="Add Report"
         >
           <span className="plus-icon">+</span>
@@ -347,6 +371,141 @@ const Reports = () => {
           </div>
         </div>
       </article>
+
+      {/* Study Selection Modal */}
+      {showStudySelectionModal && (
+        <div className="modal" style={{display: 'flex', padding: '100px 20px 40px'}}>
+          <div className="modal-content" style={{maxWidth: '1000px', margin: 'auto'}}>
+            <div className="modal-header">
+              <div>
+                <h2>Select Study for Report</h2>
+                <p className="modal-subtitle">Choose a pending study to create a report</p>
+              </div>
+              <button className="close-btn" onClick={handleCancelStudySelection}>&times;</button>
+            </div>
+            <div className="modal-body" style={{padding: '0'}}>
+              {pendingStudies.length > 0 ? (
+                <div className="table-wrap" style={{maxHeight: '500px', overflowY: 'auto'}}>
+                  <table className="tbl">
+                    <thead style={{position: 'sticky', top: 0, background: 'var(--panel)', zIndex: 1}}>
+                      <tr>
+                        <th style={{width: '5%'}}></th>
+                        <th style={{width: '15%'}}>Study ID</th>
+                        <th style={{width: '18%'}}>Patient</th>
+                        <th style={{width: '12%'}}>Exam Type</th>
+                        <th style={{width: '10%'}}>Modality</th>
+                        <th style={{width: '12%'}}>Priority</th>
+                        <th style={{width: '20%'}}>Clinical History</th>
+                        <th style={{width: '8%'}}>Files</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingStudies.map((study) => {
+                        const patientName = study.patients ? 
+                          `${study.patients.first_name} ${study.patients.last_name}` : 
+                          'Unknown Patient'
+                        
+                        const priorityClass = getPriorityBadgeClass(study.priority)
+                        const priorityText = study.priority === 'stat' ? 'STAT' : 
+                                           (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1)
+                        
+                        const fileCount = study.dicom_files ? study.dicom_files.length : 0
+                        const clinicalHistory = study.clinical_history || 'None provided'
+                        const truncatedHistory = clinicalHistory.length > 40 ? 
+                          clinicalHistory.substring(0, 40) + '...' : clinicalHistory
+                        
+                        const isSelected = selectedStudyForReport?.id === study.id
+
+                        return (
+                          <tr 
+                            key={study.id}
+                            onClick={() => handleStudySelect(study)}
+                            style={{
+                              cursor: 'pointer',
+                              background: isSelected ? '#e0e7ff' : 'transparent'
+                            }}
+                          >
+                            <td style={{textAlign: 'center'}}>
+                              <input 
+                                type="radio" 
+                                name="selectedStudy"
+                                checked={isSelected}
+                                onChange={() => handleStudySelect(study)}
+                                style={{cursor: 'pointer'}}
+                              />
+                            </td>
+                            <td data-label="Study ID">{study.study_id || 'N/A'}</td>
+                            <td data-label="Patient">{patientName}</td>
+                            <td data-label="Exam Type">{study.exam_type || 'N/A'}</td>
+                            <td data-label="Modality">{study.modality || 'N/A'}</td>
+                            <td data-label="Priority">
+                              <span className={`badge ${priorityClass}`}>{priorityText}</span>
+                            </td>
+                            <td data-label="Clinical History" title={clinicalHistory}>{truncatedHistory}</td>
+                            <td data-label="Files">{fileCount}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{padding: '40px 20px', textAlign: 'center'}}>
+                  <p style={{color: 'var(--muted)', marginBottom: '16px'}}>
+                    No pending studies available. All studies have been reviewed or have existing reports.
+                  </p>
+                  <button 
+                    onClick={handleCancelStudySelection}
+                    style={{
+                      padding: '10px 20px',
+                      border: '1px solid var(--line)',
+                      background: 'white',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+              {pendingStudies.length > 0 && (
+                <div style={{padding: '20px', borderTop: '1px solid var(--line)', display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+                  <button 
+                    onClick={handleCancelStudySelection}
+                    style={{
+                      padding: '10px 20px',
+                      border: '1px solid var(--line)',
+                      background: 'white',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleCreateReportFromStudy}
+                    disabled={!selectedStudyForReport}
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      background: selectedStudyForReport ? 'var(--brand)' : '#9ca3af',
+                      color: 'white',
+                      borderRadius: '8px',
+                      cursor: selectedStudyForReport ? 'pointer' : 'not-allowed',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Create Report
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmModal && (
