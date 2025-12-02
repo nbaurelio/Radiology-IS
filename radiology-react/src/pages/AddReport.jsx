@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { reportService } from '../services/reportService'
 import { studyService } from '../services/studyService'
-import { ArrowLeft, Save } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { ArrowLeft, Save, FileText, Image as ImageIcon, File, Download, ExternalLink } from 'lucide-react'
 import { useNotifications } from '../contexts/NotificationContext'
 import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
 
@@ -12,6 +13,8 @@ const AddReport = () => {
   const { addNotification } = useNotifications()
   const [loading, setLoading] = useState(false)
   const [studyData, setStudyData] = useState(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [filePreviewUrl, setFilePreviewUrl] = useState(null)
   const [formData, setFormData] = useState({
     study_id: '',
     patient_id: '',
@@ -27,7 +30,6 @@ const AddReport = () => {
   })
 
   useEffect(() => {
-    // Get study_id from URL query parameter
     const params = new URLSearchParams(location.search)
     const studyIdFromUrl = params.get('study_id')
     
@@ -43,7 +45,6 @@ const AddReport = () => {
         const study = result.study
         setStudyData(study)
         
-        // Pre-fill form with study data
         setFormData(prev => ({
           ...prev,
           study_id: study.study_id || '',
@@ -53,9 +54,48 @@ const AddReport = () => {
           priority: study.priority || 'routine',
           notes: study.clinical_history || ''
         }))
+
+        if (study.dicom_files && study.dicom_files.length > 0) {
+          const firstFile = study.dicom_files[0]
+          setSelectedFile(firstFile)
+          await loadFilePreview(firstFile)
+        }
       }
     } catch (error) {
       console.error('Error loading study:', error)
+    }
+  }
+
+  const loadFilePreview = async (file) => {
+    if (!file) {
+      setFilePreviewUrl(null)
+      return
+    }
+
+    try {
+      const filePath = file.file_path || file.path
+      if (!filePath) {
+        setFilePreviewUrl(null)
+        return
+      }
+
+      // Generate signed URL for the file
+      const { data, error } = await supabase.storage
+        .from('dicom-files')
+        .createSignedUrl(filePath, 3600) // 1 hour expiry
+
+      if (error) {
+        console.error('Error generating signed URL:', error)
+        setFilePreviewUrl(null)
+        return
+      }
+
+      if (data?.signedUrl) {
+        setFilePreviewUrl(data.signedUrl)
+      }
+    } catch (error) {
+      console.error('Error loading file preview:', error)
+      setFilePreviewUrl(null)
     }
   }
 
@@ -83,7 +123,6 @@ const AddReport = () => {
       const result = await reportService.createReport(reportData)
       
       if (result.success) {
-        // If this report was created from a study, update the study status
         if (studyData) {
           const statusToSet = reportData.status === 'completed' ? 'completed' : 'reading'
           await studyService.updateStudyStatus(studyData.id, statusToSet)
@@ -133,273 +172,542 @@ const AddReport = () => {
     }))
   }
 
-  return (
-    <div className="container">
-      <div className="form-page">
-        <div style={{marginBottom: '20px'}}>
-          <Link 
-            to={studyData ? `/studies/${studyData.id}` : '/reports'}
+  const handleFileClick = async (file) => {
+    setSelectedFile(file)
+    await loadFilePreview(file)
+  }
+
+  const getFileIcon = (fileName) => {
+    if (!fileName) return <File size={20} />
+    const ext = fileName.toLowerCase()
+    if (ext.endsWith('.pdf')) return <FileText size={20} />
+    if (ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png')) return <ImageIcon size={20} />
+    if (ext.endsWith('.dcm') || ext.endsWith('.dicom')) return <File size={20} />
+    return <File size={20} />
+  }
+
+  const handleDownloadFile = () => {
+    if (filePreviewUrl) {
+      window.open(filePreviewUrl, '_blank')
+    }
+  }
+
+  const handleOpenInViewer = () => {
+    if (studyData) {
+      navigate(`/studies/${studyData.id}/viewer`)
+    }
+  }
+
+  const renderFilePreview = () => {
+    if (!selectedFile) {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          color: 'var(--muted)',
+          fontSize: '14px',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <File size={48} color="var(--muted)" />
+          <p>Select a file to preview</p>
+        </div>
+      )
+    }
+
+    const fileName = selectedFile.name || selectedFile.file_name || ''
+    const ext = fileName.toLowerCase()
+
+    // For PDF files - use object tag instead of iframe
+    if (ext.endsWith('.pdf') && filePreviewUrl) {
+      return (
+        <div style={{width: '100%', height: '100%', position: 'relative'}}>
+          <object
+            data={filePreviewUrl}
+            type="application/pdf"
             style={{
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              padding: '8px 12px', 
-              border: '1px solid var(--card-border)', 
-              borderRadius: 'var(--radius)', 
-              background: 'var(--panel)', 
-              color: 'var(--ink)', 
-              cursor: 'pointer', 
-              transition: 'border-color 0.2s ease', 
-              fontFamily: 'inherit', 
-              fontSize: '14px', 
-              textDecoration: 'none', 
-              width: 'fit-content'
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              borderRadius: '8px'
             }}
           >
-            ← Back to {studyData ? 'Study' : 'Reports'}
-          </Link>
+            <div style={{
+              padding: '20px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <FileText size={48} color="var(--muted)" />
+              <p style={{color: 'var(--muted)', marginBottom: '12px'}}>
+                PDF preview not available in this browser
+              </p>
+              <button
+                onClick={handleDownloadFile}
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--brand)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px'
+                }}
+              >
+                <ExternalLink size={16} />
+                Open PDF in New Tab
+              </button>
+            </div>
+          </object>
         </div>
+      )
+    }
 
-        <h1 style={{fontSize: '28px', marginBottom: '24px', color: 'var(--text)'}}>Add New Report</h1>
+    // For image files
+    if ((ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png')) && filePreviewUrl) {
+      return (
+        <img
+          src={filePreviewUrl}
+          alt="Medical Image"
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+            borderRadius: '8px'
+          }}
+        />
+      )
+    }
 
-        <form onSubmit={handleSubmit}>
-          {/* Study Information - READ ONLY */}
-          <div className="form-section">
-            <h2 className="form-section-title">Study Information</h2>
-            <p className="form-section-subtitle">Pre-filled from the study</p>
+    // For DICOM files - show placeholder with viewer button
+    if (ext.endsWith('.dcm') || ext.endsWith('.dicom') || ext.endsWith('.zip')) {
+      return (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: '16px'
+        }}>
+          <File size={64} color="var(--muted)" />
+          <div style={{textAlign: 'center'}}>
+            <p style={{margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: 'var(--ink)'}}>
+              DICOM File
+            </p>
+            <p style={{margin: 0, fontSize: '14px', color: 'var(--muted)', marginBottom: '16px'}}>
+              {fileName}
+            </p>
+            <button
+              onClick={handleOpenInViewer}
+              style={{
+                padding: '10px 20px',
+                background: 'var(--brand)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <ExternalLink size={18} />
+              Open in DICOM Viewer
+            </button>
+          </div>
+        </div>
+      )
+    }
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="study_id">Study ID</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">assignment</span>
+    // Default fallback
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        gap: '12px'
+      }}>
+        <File size={48} color="var(--muted)" />
+        <p style={{color: 'var(--muted)', fontSize: '14px'}}>
+          Preview not available for this file type
+        </p>
+        {filePreviewUrl && (
+          <button
+            onClick={handleDownloadFile}
+            style={{
+              padding: '8px 16px',
+              background: 'var(--brand)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px'
+            }}
+          >
+            <Download size={16} />
+            Download File
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="container" style={{maxWidth: '100%', padding: '20px'}}>
+      <div style={{marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <Link 
+          to={studyData ? `/studies/${studyData.id}` : '/reports'}
+          style={{
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            padding: '8px 12px', 
+            border: '1px solid var(--card-border)', 
+            borderRadius: 'var(--radius)', 
+            background: 'var(--panel)', 
+            color: 'var(--ink)', 
+            cursor: 'pointer', 
+            transition: 'border-color 0.2s ease', 
+            fontFamily: 'inherit', 
+            fontSize: '14px', 
+            textDecoration: 'none'
+          }}
+        >
+          ← Back to {studyData ? 'Study' : 'Reports'}
+        </Link>
+        <h1 style={{fontSize: '24px', margin: 0, color: 'var(--ink)'}}>Add New Report</h1>
+        <div style={{width: '120px'}}></div>
+      </div>
+
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: 'calc(100vh - 200px)'}}>
+        {/* Left Side - Form */}
+        <div style={{overflowY: 'auto', paddingRight: '10px'}}>
+          <form onSubmit={handleSubmit}>
+            {/* Study Information */}
+            <article className="card" style={{marginBottom: '20px'}}>
+              <div className="hd">Study Information</div>
+              <div className="bd" style={{padding: '20px'}}>
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px'}}>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Study ID
+                    </label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={formData.study_id}
+                      readOnly
+                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                    />
+                  </div>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Patient
+                    </label>
+                    <input 
+                      type="text" 
+                      className="form-input"
+                      value={studyData?.patients ? `${studyData.patients.first_name} ${studyData.patients.last_name}` : 'N/A'}
+                      readOnly
+                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                    />
+                  </div>
+                </div>
+
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px'}}>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Exam Type
+                    </label>
+                    <input 
+                      type="text" 
+                      className="form-input"
+                      value={formData.exam_type || 'N/A'}
+                      readOnly
+                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                    />
+                  </div>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Modality
+                    </label>
+                    <input 
+                      type="text" 
+                      className="form-input"
+                      value={formData.modality || 'N/A'}
+                      readOnly
+                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                    />
+                  </div>
+                </div>
+
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px'}}>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Priority
+                    </label>
+                    <select 
+                      name="priority"
+                      className="form-input"
+                      value={formData.priority}
+                      onChange={handleInputChange}
+                    >
+                      <option value="routine">Routine</option>
+                      <option value="urgent">Urgent</option>
+                      <option value="stat">STAT</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Status <span style={{color: 'var(--error)'}}>*</span>
+                    </label>
+                    <select 
+                      name="status"
+                      className="form-input"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="reading">Reading</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{marginBottom: '16px'}}>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Assigned Radiologist
+                  </label>
                   <input 
                     type="text" 
-                    id="study_id" 
-                    className="form-input" 
-                    value={formData.study_id}
-                    readOnly
-                    style={{
-                      background: 'var(--bg)',
-                      cursor: 'not-allowed',
-                      paddingLeft: '40px'
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="patient_name">Patient</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">person</span>
-                  <input 
-                    type="text" 
-                    id="patient_name" 
-                    className="form-input"
-                    value={studyData?.patients ? `${studyData.patients.first_name} ${studyData.patients.last_name}` : 'N/A'}
-                    readOnly
-                    style={{
-                      background: 'var(--bg)',
-                      cursor: 'not-allowed',
-                      paddingLeft: '40px'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="exam_type">Exam Type</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">medical_services</span>
-                  <input 
-                    type="text" 
-                    id="exam_type" 
-                    className="form-input"
-                    value={formData.exam_type || 'N/A'}
-                    readOnly
-                    style={{
-                      background: 'var(--bg)',
-                      cursor: 'not-allowed',
-                      paddingLeft: '40px'
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="modality">Modality</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">medical_services</span>
-                  <input 
-                    type="text" 
-                    id="modality" 
-                    className="form-input"
-                    value={formData.modality || 'N/A'}
-                    readOnly
-                    style={{
-                      background: 'var(--bg)',
-                      cursor: 'not-allowed',
-                      paddingLeft: '40px'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="priority">Priority</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">priority_high</span>
-                  <select 
-                    id="priority"
-                    name="priority"
-                    className="form-input"
-                    value={formData.priority}
-                    onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
-                  >
-                    <option value="routine">Routine</option>
-                    <option value="urgent">Urgent</option>
-                    <option value="stat">STAT</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="status">Status <span className="required">*</span></label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">info</span>
-                  <select 
-                    id="status"
-                    name="status"
-                    className="form-input"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
-                    required
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="reading">Reading</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label htmlFor="assigned_radiologist">Assigned Radiologist</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">person</span>
-                  <input 
-                    type="text" 
-                    id="assigned_radiologist"
                     name="assigned_radiologist"
                     className="form-input"
                     placeholder="Ex: Dr. Smith"
                     value={formData.assigned_radiologist}
                     onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
                   />
                 </div>
-              </div>
-            </div>
 
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label htmlFor="notes">Clinical History / Notes</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon" style={{top: '12px'}}>notes</span>
+                <div>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Clinical History / Notes
+                  </label>
                   <textarea 
-                    id="notes"
                     name="notes"
                     className="form-input"
                     placeholder="Clinical history from the study"
                     rows="3"
                     value={formData.notes}
                     onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
-                  ></textarea>
+                  />
                 </div>
               </div>
-            </div>
-          </div>
+            </article>
 
-          {/* Report Content - EDITABLE */}
-          <div className="form-section">
-            <h2 className="form-section-title">Report Content</h2>
-            <p className="form-section-subtitle">Enter your radiological findings and interpretation</p>
-
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label htmlFor="findings">Findings <span className="required">*</span></label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon" style={{top: '12px'}}>description</span>
+            {/* Report Content */}
+            <article className="card" style={{marginBottom: '20px'}}>
+              <div className="hd">Report Content</div>
+              <div className="bd" style={{padding: '20px'}}>
+                <div style={{marginBottom: '16px'}}>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Findings <span style={{color: 'var(--error)'}}>*</span>
+                  </label>
                   <textarea 
-                    id="findings"
                     name="findings"
                     className="form-input" 
                     placeholder="Describe the radiological findings..."
                     rows="6"
                     value={formData.findings}
                     onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
                     required
-                  ></textarea>
+                  />
                 </div>
-              </div>
-            </div>
 
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label htmlFor="impression">Impression <span className="required">*</span></label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon" style={{top: '12px'}}>psychology</span>
+                <div style={{marginBottom: '16px'}}>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Impression <span style={{color: 'var(--error)'}}>*</span>
+                  </label>
                   <textarea 
-                    id="impression"
                     name="impression"
                     className="form-input" 
                     placeholder="Provide clinical impression..."
                     rows="4"
                     value={formData.impression}
                     onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
                     required
-                  ></textarea>
+                  />
                 </div>
-              </div>
-            </div>
 
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label htmlFor="recommendations">Recommendations</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon" style={{top: '12px'}}>recommend</span>
+                <div>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Recommendations
+                  </label>
                   <textarea 
-                    id="recommendations"
                     name="recommendations"
                     className="form-input" 
                     placeholder="Any recommendations for follow-up..."
                     rows="3"
                     value={formData.recommendations}
                     onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
-                  ></textarea>
+                  />
                 </div>
               </div>
-            </div>
-          </div>
+            </article>
 
-          {/* Form Actions */}
-          <div className="form-actions" style={{alignItems: 'center'}}>
-            <button type="button" className="btn-cancel" onClick={handleCancel} style={{height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-create" disabled={loading} style={{height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-              {loading ? 'Creating...' : 'Create Report'}
-            </button>
-          </div>
-        </form>
+            {/* Form Actions */}
+            <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px'}}>
+              <button 
+                type="button" 
+                onClick={handleCancel}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid var(--line)',
+                  background: 'white',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit"
+                disabled={loading}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: loading ? '#9ca3af' : 'var(--brand)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Save size={16} />
+                {loading ? 'Creating...' : 'Create Report'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Right Side - Files and Preview */}
+        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          {/* Files List */}
+          <article className="card" style={{flex: '0 0 auto', maxHeight: '300px'}}>
+            <div className="hd">Study Files ({studyData?.dicom_files?.length || 0})</div>
+            <div className="bd" style={{padding: '12px', maxHeight: '250px', overflowY: 'auto'}}>
+              {studyData?.dicom_files && studyData.dicom_files.length > 0 ? (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  {studyData.dicom_files.map((file, index) => {
+                    const fileName = file.name || file.file_name || `File ${index + 1}`
+                    const fileSize = file.size || file.file_size
+                    const sizeInMB = fileSize ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00'
+                    const isSelected = selectedFile === file
+
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => handleFileClick(file)}
+                        style={{
+                          padding: '12px',
+                          border: `2px solid ${isSelected ? 'var(--brand)' : 'var(--line)'}`,
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          background: isSelected ? '#f0f4ff' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px'
+                        }}
+                      >
+                        <div style={{color: isSelected ? 'var(--brand)' : 'var(--muted)'}}>
+                          {getFileIcon(fileName)}
+                        </div>
+                        <div style={{flex: 1, minWidth: 0}}>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: isSelected ? '600' : '500',
+                            color: isSelected ? 'var(--brand)' : 'var(--ink)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {fileName}
+                          </div>
+                          <div style={{fontSize: '12px', color: 'var(--muted)', marginTop: '2px'}}>
+                            {sizeInMB} MB
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p style={{textAlign: 'center', color: 'var(--muted)', padding: '20px'}}>
+                  No files available
+                </p>
+              )}
+            </div>
+          </article>
+
+          {/* File Preview */}
+          <article className="card" style={{flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
+            <div className="hd" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <div>
+                File Preview
+                {selectedFile && (
+                  <span style={{fontWeight: 400, fontSize: '13px', marginLeft: '8px', color: 'var(--muted)'}}>
+                    {selectedFile.name || selectedFile.file_name}
+                  </span>
+                )}
+              </div>
+              {filePreviewUrl && (
+                <button
+                  onClick={handleDownloadFile}
+                  style={{
+                    padding: '4px 12px',
+                    background: 'transparent',
+                    border: '1px solid var(--line)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '13px',
+                    color: 'var(--ink)'
+                  }}
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={14} />
+                  Open
+                </button>
+              )}
+            </div>
+            <div className="bd" style={{padding: '16px', flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+              {renderFilePreview()}
+            </div>
+          </article>
+        </div>
       </div>
     </div>
   )
