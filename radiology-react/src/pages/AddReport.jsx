@@ -11,17 +11,14 @@ const AddReport = () => {
   const location = useLocation()
   const { addNotification } = useNotifications()
   const [loading, setLoading] = useState(false)
-  const [patients, setPatients] = useState([])
-  const [studyId, setStudyId] = useState('')
   const [studyData, setStudyData] = useState(null)
   const [formData, setFormData] = useState({
+    study_id: '',
     patient_id: '',
     exam_type: '',
-    study_date: '',
-    appointment_date: '',
-    status: 'pending',
     modality: '',
     priority: 'routine',
+    status: 'pending',
     assigned_radiologist: '',
     notes: '',
     findings: '',
@@ -37,8 +34,6 @@ const AddReport = () => {
     if (studyIdFromUrl) {
       loadStudyData(studyIdFromUrl)
     }
-    
-    loadPatients()
   }, [location])
 
   const loadStudyData = async (id) => {
@@ -47,17 +42,15 @@ const AddReport = () => {
       if (result.success && result.study) {
         const study = result.study
         setStudyData(study)
-        setStudyId(study.study_id || '')
         
         // Pre-fill form with study data
-        const studyDate = study.created_at ? new Date(study.created_at).toISOString().slice(0, 16) : ''
-        
         setFormData(prev => ({
           ...prev,
+          study_id: study.study_id || '',
           patient_id: study.patient_uuid || '',
           exam_type: study.exam_type || '',
+          modality: study.modality || '',
           priority: study.priority || 'routine',
-          appointment_date: studyDate,
           notes: study.clinical_history || ''
         }))
       }
@@ -66,20 +59,13 @@ const AddReport = () => {
     }
   }
 
-  const loadPatients = async () => {
-    try {
-      const result = await reportService.getAllPatients()
-      if (result.success) {
-        setPatients(result.patients)
-      }
-    } catch (error) {
-      console.error('Error loading patients:', error)
-    }
-  }
-
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-      navigate('/reports')
+      if (studyData) {
+        navigate(`/studies/${studyData.id}`)
+      } else {
+        navigate('/reports')
+      }
     }
   }
 
@@ -89,8 +75,7 @@ const AddReport = () => {
     
     const reportData = {
       ...formData,
-      study_id: studyId,
-      status: 'pending',
+      appointment_date: new Date().toISOString(),
       created_at: new Date().toISOString()
     }
     
@@ -107,10 +92,10 @@ const AddReport = () => {
         addNotification(createNotification({
           type: 'report_created',
           title: '✅ Report Created',
-          message: `Report created for study ${studyId || 'N/A'}. Status: ${reportData.status}.`,
+          message: `Report created for study ${formData.study_id || 'N/A'}. Status: ${reportData.status}.`,
           priority: PRIORITY_LEVELS.ROUTINE,
           recipientRole: USER_ROLES.RADIOLOGIST,
-          linkedEntity: { study_id: studyId },
+          linkedEntity: { study_id: formData.study_id },
           actionLink: `/reports`,
           autoRemove: false
         }))
@@ -153,7 +138,7 @@ const AddReport = () => {
       <div className="form-page">
         <div style={{marginBottom: '20px'}}>
           <Link 
-            to="/reports" 
+            to={studyData ? `/studies/${studyData.id}` : '/reports'}
             style={{
               display: 'flex', 
               alignItems: 'center', 
@@ -171,139 +156,99 @@ const AddReport = () => {
               width: 'fit-content'
             }}
           >
-            ← Back to Reports
+            ← Back to {studyData ? 'Study' : 'Reports'}
           </Link>
         </div>
 
         <h1 style={{fontSize: '28px', marginBottom: '24px', color: 'var(--text)'}}>Add New Report</h1>
 
         <form onSubmit={handleSubmit}>
-          {/* Study Information */}
+          {/* Study Information - READ ONLY */}
           <div className="form-section">
             <h2 className="form-section-title">Study Information</h2>
-            <p className="form-section-subtitle">Basic information about the study</p>
+            <p className="form-section-subtitle">Pre-filled from the study</p>
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="studyId">Study ID <span className="required">*</span></label>
+                <label htmlFor="study_id">Study ID</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">assignment</span>
                   <input 
                     type="text" 
-                    id="studyId" 
+                    id="study_id" 
                     className="form-input" 
-                    placeholder="Enter study ID" 
-                    value={studyId}
-                    onChange={(e) => setStudyId(e.target.value)}
-                    readOnly={!!studyData}
+                    value={formData.study_id}
+                    readOnly
                     style={{
-                      background: studyData ? 'var(--bg)' : 'var(--panel)',
-                      cursor: studyData ? 'not-allowed' : 'text',
+                      background: 'var(--bg)',
+                      cursor: 'not-allowed',
                       paddingLeft: '40px'
                     }}
-                    required 
                   />
                 </div>
               </div>
               <div className="form-group">
-                <label htmlFor="patient_id">Patient <span className="required">*</span></label>
+                <label htmlFor="patient_name">Patient</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">person</span>
-                  <select 
-                    id="patient_id" 
+                  <input 
+                    type="text" 
+                    id="patient_name" 
                     className="form-input"
-                    value={formData.patient_id}
-                    onChange={(e) => setFormData({...formData, patient_id: e.target.value})}
-                    disabled={!!studyData}
+                    value={studyData?.patients ? `${studyData.patients.first_name} ${studyData.patients.last_name}` : 'N/A'}
+                    readOnly
                     style={{
-                      background: studyData ? 'var(--bg)' : 'var(--panel)',
-                      cursor: studyData ? 'not-allowed' : 'pointer',
+                      background: 'var(--bg)',
+                      cursor: 'not-allowed',
                       paddingLeft: '40px'
                     }}
-                    required
-                  >
-                    <option value="">Select a patient</option>
-                    {patients.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.first_name} {p.last_name} ({p.patient_id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="exam_type">Exam Type <span className="required">*</span></label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">medical_services</span>
-                  <select 
-                    id="exam_type"
-                    name="exam_type"
-                    className="form-input"
-                    value={formData.exam_type}
-                    onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
-                    required
-                  >
-                    <option value="">Select exam type</option>
-                    <option value="X-Ray">X-Ray</option>
-                    <option value="CT Scan">CT Scan</option>
-                    <option value="MRI">MRI</option>
-                    <option value="Ultrasound">Ultrasound</option>
-                    <option value="Mammography">Mammography</option>
-                    <option value="Fluoroscopy">Fluoroscopy</option>
-                    <option value="Nuclear Medicine">Nuclear Medicine</option>
-                    <option value="PET Scan">PET Scan</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="appointment_date">Study/Appointment Date <span className="required">*</span></label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">event</span>
-                  <input 
-                    type="datetime-local" 
-                    id="appointment_date"
-                    name="appointment_date"
-                    className="form-input"
-                    value={formData.appointment_date}
-                    onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
-                    required 
                   />
                 </div>
               </div>
             </div>
 
             <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="exam_type">Exam Type</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">medical_services</span>
+                  <input 
+                    type="text" 
+                    id="exam_type" 
+                    className="form-input"
+                    value={formData.exam_type || 'N/A'}
+                    readOnly
+                    style={{
+                      background: 'var(--bg)',
+                      cursor: 'not-allowed',
+                      paddingLeft: '40px'
+                    }}
+                  />
+                </div>
+              </div>
               <div className="form-group">
                 <label htmlFor="modality">Modality</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">medical_services</span>
-                  <select 
-                    id="modality"
-                    name="modality"
+                  <input 
+                    type="text" 
+                    id="modality" 
                     className="form-input"
-                    value={formData.modality}
-                    onChange={handleInputChange}
-                    style={{paddingLeft: '40px'}}
-                  >
-                    <option value="">Select modality</option>
-                    <option value="CR">CR - Computed Radiography</option>
-                    <option value="CT">CT - Computed Tomography</option>
-                    <option value="MR">MR - Magnetic Resonance</option>
-                    <option value="US">US - Ultrasound</option>
-                    <option value="MG">MG - Mammography</option>
-                    <option value="XA">XA - X-Ray Angiography</option>
-                    <option value="NM">NM - Nuclear Medicine</option>
-                    <option value="PT">PT - PET Scan</option>
-                  </select>
+                    value={formData.modality || 'N/A'}
+                    readOnly
+                    style={{
+                      background: 'var(--bg)',
+                      cursor: 'not-allowed',
+                      paddingLeft: '40px'
+                    }}
+                  />
                 </div>
               </div>
+            </div>
+
+            <div className="form-row">
               <div className="form-group">
-                <label htmlFor="priority">Priority <span className="required">*</span></label>
+                <label htmlFor="priority">Priority</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">priority_high</span>
                   <select 
@@ -313,7 +258,6 @@ const AddReport = () => {
                     value={formData.priority}
                     onChange={handleInputChange}
                     style={{paddingLeft: '40px'}}
-                    required
                   >
                     <option value="routine">Routine</option>
                     <option value="urgent">Urgent</option>
@@ -321,9 +265,6 @@ const AddReport = () => {
                   </select>
                 </div>
               </div>
-            </div>
-
-            <div className="form-row">
               <div className="form-group">
                 <label htmlFor="status">Status <span className="required">*</span></label>
                 <div className="input-with-icon">
@@ -343,7 +284,10 @@ const AddReport = () => {
                   </select>
                 </div>
               </div>
-              <div className="form-group">
+            </div>
+
+            <div className="form-row">
+              <div className="form-group full-width">
                 <label htmlFor="assigned_radiologist">Assigned Radiologist</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">person</span>
@@ -363,14 +307,14 @@ const AddReport = () => {
 
             <div className="form-row">
               <div className="form-group full-width">
-                <label htmlFor="notes">Notes</label>
+                <label htmlFor="notes">Clinical History / Notes</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon" style={{top: '12px'}}>notes</span>
                   <textarea 
                     id="notes"
                     name="notes"
                     className="form-input"
-                    placeholder="Additional notes or instructions for this appointment"
+                    placeholder="Clinical history from the study"
                     rows="3"
                     value={formData.notes}
                     onChange={handleInputChange}
@@ -380,14 +324,15 @@ const AddReport = () => {
               </div>
             </div>
           </div>
-          {/* Report Content */}
+
+          {/* Report Content - EDITABLE */}
           <div className="form-section">
             <h2 className="form-section-title">Report Content</h2>
-            <p className="form-section-subtitle">Radiological findings and interpretation</p>
+            <p className="form-section-subtitle">Enter your radiological findings and interpretation</p>
 
             <div className="form-row">
               <div className="form-group full-width">
-                <label htmlFor="findings">Findings</label>
+                <label htmlFor="findings">Findings <span className="required">*</span></label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon" style={{top: '12px'}}>description</span>
                   <textarea 
@@ -399,6 +344,7 @@ const AddReport = () => {
                     value={formData.findings}
                     onChange={handleInputChange}
                     style={{paddingLeft: '40px'}}
+                    required
                   ></textarea>
                 </div>
               </div>
@@ -406,7 +352,7 @@ const AddReport = () => {
 
             <div className="form-row">
               <div className="form-group full-width">
-                <label htmlFor="impression">Impression</label>
+                <label htmlFor="impression">Impression <span className="required">*</span></label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon" style={{top: '12px'}}>psychology</span>
                   <textarea 
@@ -418,6 +364,7 @@ const AddReport = () => {
                     value={formData.impression}
                     onChange={handleInputChange}
                     style={{paddingLeft: '40px'}}
+                    required
                   ></textarea>
                 </div>
               </div>

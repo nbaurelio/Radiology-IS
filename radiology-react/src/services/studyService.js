@@ -43,6 +43,8 @@ export const studyService = {
           id,
           study_id,
           patient_uuid,
+          exam_type,
+          modality,
           created_at,
           priority,
           status,

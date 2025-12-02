@@ -151,6 +151,14 @@ const StudyDetail = () => {
                     <td style={{padding: '12px'}}>{uploadDate}</td>
                   </tr>
                   <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600}}>Exam Type</td>
+                    <td style={{padding: '12px'}}>{study.exam_type || 'N/A'}</td>
+                  </tr>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
+                    <td style={{padding: '12px', fontWeight: 600}}>Modality</td>
+                    <td style={{padding: '12px'}}>{study.modality || 'N/A'}</td>
+                  </tr>
+                  <tr style={{borderBottom: '1px solid var(--line)'}}>
                     <td style={{padding: '12px', fontWeight: 600}}>Priority</td>
                     <td style={{padding: '12px'}}>
                       <span className={`badge ${getPriorityBadgeClass(study.priority)}`}>

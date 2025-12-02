@@ -246,8 +246,8 @@ const Dashboard = () => {
                             {patientName}
                           </Link>
                         </td>
-                        <td data-label="Modality">N/A</td>
-                        <td data-label="Exam Type">N/A</td>
+                        <td data-label="Modality">{study.modality || 'N/A'}</td>
+                        <td data-label="Exam Type">{study.exam_type || 'N/A'}</td>
                         <td data-label="Date">{studyDate}</td>
                         <td data-label="Priority">
                           <span className={`badge ${getBadgeClass('priority', study.priority)}`}>

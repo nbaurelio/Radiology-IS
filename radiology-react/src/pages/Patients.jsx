@@ -21,6 +21,8 @@ const Patients = () => {
   const [studyId, setStudyId] = useState('')
   const [studyDate, setStudyDate] = useState('')
   const [priority, setPriority] = useState('routine')
+  const [examType, setExamType] = useState('')
+  const [modality, setModality] = useState('')
   const [clinicalHistory, setClinicalHistory] = useState('')
   const [scheduling, setScheduling] = useState(false)
 
@@ -152,6 +154,11 @@ const Patients = () => {
       return
     }
 
+    if (!examType) {
+      alert('Please select an exam type')
+      return
+    }
+
     setScheduling(true)
 
     const currentUser = JSON.parse(localStorage.getItem('userSession') || '{}')
@@ -160,6 +167,8 @@ const Patients = () => {
     const studyData = {
       study_id: studyId,
       patient_uuid: selectedPatient.id,
+      exam_type: examType,
+      modality: modality || null,
       clinical_history: clinicalHistory || 'No clinical history provided',
       priority: priority,
       status: 'pending',
@@ -197,6 +206,8 @@ const Patients = () => {
         setSelectedPatient(null)
         setStudyDate('')
         setPriority('routine')
+        setExamType('')
+        setModality('')
         setClinicalHistory('')
         
         // Reload patients to show updated next appointment
@@ -217,6 +228,8 @@ const Patients = () => {
     setSelectedPatient(null)
     setStudyDate('')
     setPriority('routine')
+    setExamType('')
+    setModality('')
     setClinicalHistory('')
   }
 
@@ -496,6 +509,50 @@ const Patients = () => {
                       <option value="routine">Routine</option>
                       <option value="urgent">Urgent</option>
                       <option value="stat">STAT</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px'}}>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Exam Type <span style={{color: '#ef4444'}}>*</span>
+                    </label>
+                    <select 
+                      className="form-input" 
+                      value={examType}
+                      onChange={(e) => setExamType(e.target.value)}
+                      required
+                    >
+                      <option value="">Select exam type</option>
+                      <option value="X-Ray">X-Ray</option>
+                      <option value="CT Scan">CT Scan</option>
+                      <option value="MRI">MRI</option>
+                      <option value="Ultrasound">Ultrasound</option>
+                      <option value="Mammography">Mammography</option>
+                      <option value="Fluoroscopy">Fluoroscopy</option>
+                      <option value="Nuclear Medicine">Nuclear Medicine</option>
+                      <option value="PET Scan">PET Scan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Modality
+                    </label>
+                    <select 
+                      className="form-input" 
+                      value={modality}
+                      onChange={(e) => setModality(e.target.value)}
+                    >
+                      <option value="">Select modality</option>
+                      <option value="CR">CR - Computed Radiography</option>
+                      <option value="CT">CT - Computed Tomography</option>
+                      <option value="MR">MR - Magnetic Resonance</option>
+                      <option value="US">US - Ultrasound</option>
+                      <option value="MG">MG - Mammography</option>
+                      <option value="XA">XA - X-Ray Angiography</option>
+                      <option value="NM">NM - Nuclear Medicine</option>
+                      <option value="PT">PT - PET Scan</option>
                     </select>
                   </div>
                 </div>
