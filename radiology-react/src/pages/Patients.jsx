@@ -294,7 +294,7 @@ const Patients = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '0 20px'
+              padding: '0 60px'
             }}
             title="Schedule Appointment"
           >
@@ -305,6 +305,7 @@ const Patients = () => {
             className="add-patient-btn" 
             onClick={() => window.location.href = '/patients/add'}
             aria-label="Add Patient"
+            title="Add Patient"
           >
             <span className="plus-icon">+</span>
           </button>
