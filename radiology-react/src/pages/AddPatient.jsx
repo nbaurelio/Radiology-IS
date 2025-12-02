@@ -13,12 +13,9 @@ const AddPatient = () => {
   const [phoneNumber, setPhoneNumber] = useState('')
   
   // Study Information State
-  const [examType, setExamType] = useState('general')
   const [studyDate, setStudyDate] = useState('')
-  const [modality, setModality] = useState('')
   const [priority, setPriority] = useState('routine')
   const [status, setStatus] = useState('pending')
-  const [assignedRadiologist, setAssignedRadiologist] = useState('')
   const [studyNotes, setStudyNotes] = useState('')
   
   const { addNotification } = useNotifications()
@@ -63,11 +60,6 @@ const AddPatient = () => {
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`
   }
 
-  const scheduleNow = () => {
-    const nowLocal = formatDateTimeLocal(new Date())
-    setStudyDate(nowLocal)
-  }
-
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
       navigate('/patients')
@@ -107,37 +99,56 @@ const AddPatient = () => {
       const result = await patientService.createPatient(patientData)
       
       if (result.success) {
-        // Create study record if study information is provided
-        if (examType || modality || studyDate) {
+        // Create study record if clinical history or study date is provided
+        // This creates a "pending study" that will show up in Reports tab
+        if (studyNotes || studyDate) {
+          const currentUser = JSON.parse(localStorage.getItem('userSession') || '{}')
+          
           const studyData = {
             study_id: studyId,
-            patient_id: result.patient.id,
-            patient_uuid: result.patient.id,
-            exam_type: examType,
-            modality: modality,
-            study_date: studyDate || now,
-            schedule: studyDate || now,
-            status: status,
-            priority: priority,
-            assigned_radiologist_id: assignedRadiologist,
-            assigned_radiologist: assignedRadiologist,
-            note_apt: studyNotes,
-            notes: studyNotes,
-            type: 'study',
+            patient_uuid: result.patient.id, // UUID from created patient
+            clinical_history: studyNotes || 'Pending clinical information',
+            priority: priority || 'routine',
+            status: status || 'pending',
+            dicom_files: [], // Empty JSONB array - files added via upload later
+            created_by: currentUser?.id || null,
             created_at: now,
             updated_at: now
           }
           
+          console.log('Creating study with data:', studyData)
+          
           try {
             const studyResult = await studyService.createStudy(studyData)
-            if (!studyResult.success) {
+            if (studyResult.success) {
+              console.log('Study created successfully:', studyResult)
+              
+              // Update patient's next_appointment to reflect the new study
+              await patientService.updatePatient(result.patient.id, {
+                next_appointment: studyDate || now,
+                last_visit_date: now
+              })
+              
+              addNotification(createNotification({
+                type: 'study_created',
+                title: '📋 Study Scheduled',
+                message: `Study ${studyId} has been created for patient ${firstName} ${lastName}. Upload DICOM files to complete.`,
+                priority: priority === 'stat' ? PRIORITY_LEVELS.URGENT : PRIORITY_LEVELS.ROUTINE,
+                recipientRole: USER_ROLES.ADMIN,
+                linkedEntity: { study_id: studyId, patient_id: patientData.patient_id },
+                actionLink: `/studies/${studyResult.study.id}`,
+                autoRemove: false
+              }))
+            } else {
               console.error('Error creating study:', studyResult.message)
+              alert(`Warning: Patient created but study creation failed: ${studyResult.message}`)
             }
           } catch (studyError) {
             console.error('Failed to create study:', studyError)
-            // Continue with patient creation even if study creation fails
+            alert(`Warning: Patient created but study creation failed. Error: ${studyError.message}`)
           }
         }
+        
         alert('Patient profile created successfully!')
         
         // Send success notification
@@ -240,7 +251,7 @@ const AddPatient = () => {
                   />
                 </div>
                 <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
-                  Auto-generated (e.g., PAT-0001)
+                  Auto-generated (e.g., PAT-2025-0001)
                 </small>
               </div>
               <div className="form-group">
@@ -372,16 +383,17 @@ const AddPatient = () => {
                     className="form-input" 
                     placeholder="Enter relevant medical history, conditions, allergies, etc."
                     style={{paddingLeft: '40px'}}
+                    rows="3"
                   ></textarea>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Study Information (also visible when creating a patient) */}
+          {/* Study Scheduling (Optional) */}
           <div className="form-section">
-            <h2 className="form-section-title">Study Information and Appointment Scheduling</h2>
-            <p className="form-section-subtitle">Basic information about the study and scheduling details</p>
+            <h2 className="form-section-title">Schedule Study (Optional)</h2>
+            <p className="form-section-subtitle">Create a pending study for this patient. DICOM files can be uploaded later.</p>
 
             <div className="form-row">
               <div className="form-group">
@@ -394,7 +406,24 @@ const AddPatient = () => {
                     className="form-input"
                     value={studyId}
                     readOnly
-                    style={{paddingLeft: '40px'}}
+                    style={{paddingLeft: '40px', background: 'var(--bg)', cursor: 'not-allowed'}}
+                  />
+                </div>
+                <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
+                  Auto-generated (e.g., STU-2025-0001)
+                </small>
+              </div>
+              <div className="form-group">
+                <label htmlFor="studyDate">Appointment Date</label>
+                <div className="input-with-icon">
+                  <span className="material-icons input-icon">event</span>
+                  <input 
+                    type="datetime-local" 
+                    id="studyDate" 
+                    className="form-input" 
+                    value={studyDate} 
+                    onChange={(e) => setStudyDate(e.target.value)} 
+                    style={{paddingLeft: '40px'}} 
                   />
                 </div>
               </div>
@@ -402,84 +431,61 @@ const AddPatient = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="examType">Exam Type</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">menu_book</span>
-                  <select id="examType" className="form-input" value={examType} onChange={(e) => setExamType(e.target.value)} style={{paddingLeft: '40px'}}>
-                    <option value="general">General</option>
-                    <option value="chest">Chest</option>
-                    <option value="abdo">Abdomen</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="studyDate">Study/Appointment Date</label>
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                  <div className="input-with-icon" style={{flex: 1}}>
-                    <span className="material-icons input-icon">event</span>
-                    <input type="datetime-local" id="studyDate" className="form-input" value={studyDate} onChange={(e) => setStudyDate(e.target.value)} style={{paddingLeft: '40px'}} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="modality">Modality</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">science</span>
-                  <select id="modality" className="form-input" value={modality} onChange={(e) => setModality(e.target.value)} style={{paddingLeft: '40px'}}>
-                    <option value="">Select modality</option>
-                    <option value="ct">CT</option>
-                    <option value="mr">MR</option>
-                    <option value="xr">XR</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
                 <label htmlFor="priority">Priority</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">priority_high</span>
-                  <select id="priority" className="form-input" value={priority} onChange={(e) => setPriority(e.target.value)} style={{paddingLeft: '40px'}}>
+                  <select 
+                    id="priority" 
+                    className="form-input" 
+                    value={priority} 
+                    onChange={(e) => setPriority(e.target.value)} 
+                    style={{paddingLeft: '40px'}}
+                  >
                     <option value="routine">Routine</option>
                     <option value="urgent">Urgent</option>
                     <option value="stat">STAT</option>
                   </select>
                 </div>
               </div>
-            </div>
-
-            <div className="form-row">
               <div className="form-group">
                 <label htmlFor="status">Status</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon">info</span>
-                  <select id="status" className="form-input" value={status} onChange={(e) => setStatus(e.target.value)} style={{paddingLeft: '40px'}}>
+                  <select 
+                    id="status" 
+                    className="form-input" 
+                    value={status} 
+                    onChange={(e) => setStatus(e.target.value)} 
+                    style={{paddingLeft: '40px'}}
+                  >
                     <option value="pending">Pending</option>
                     <option value="reading">Reading</option>
                     <option value="completed">Completed</option>
                   </select>
                 </div>
               </div>
-              <div className="form-group">
-                <label htmlFor="assignedRadiologist">Assigned Radiologist</label>
-                <div className="input-with-icon">
-                  <span className="material-icons input-icon">person</span>
-                  <input type="text" id="assignedRadiologist" className="form-input" value={assignedRadiologist} onChange={(e) => setAssignedRadiologist(e.target.value)} placeholder="Ex: Dr. Smith" style={{paddingLeft: '40px'}} />
-                </div>
-              </div>
             </div>
 
             <div className="form-row">
               <div className="form-group full-width">
-                <label htmlFor="studyNotes">Notes</label>
+                <label htmlFor="studyNotes">Clinical History / Reason for Study</label>
                 <div className="input-with-icon">
                   <span className="material-icons input-icon" style={{top: '12px'}}>notes</span>
-                  <textarea id="studyNotes" className="form-input" value={studyNotes} onChange={(e) => setStudyNotes(e.target.value)} placeholder="Any relevant notes about the study" style={{paddingLeft: '40px'}} />
+                  <textarea 
+                    id="studyNotes" 
+                    className="form-input" 
+                    value={studyNotes} 
+                    onChange={(e) => setStudyNotes(e.target.value)} 
+                    placeholder="Enter clinical history, symptoms, or reason for the study..."
+                    style={{paddingLeft: '40px'}} 
+                    rows="3" 
+                  />
                 </div>
+                <small style={{color: 'var(--muted)', marginTop: '4px', display: 'block'}}>
+                  Fill this field to create a pending study. Leave blank to skip study creation.
+                </small>
               </div>
             </div>
-
           </div>
 
           {/* Form Actions */}
