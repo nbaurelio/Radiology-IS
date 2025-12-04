@@ -374,8 +374,22 @@ const Reports = () => {
 
       {/* Study Selection Modal */}
       {showStudySelectionModal && (
-        <div className="modal" style={{display: 'flex', padding: '100px 20px 40px'}}>
-          <div className="modal-content" style={{maxWidth: '1000px', margin: 'auto'}}>
+        <div
+          className="modal"
+          style={{
+            display: 'flex',
+            padding: '140px 20px 40px',
+            alignItems: 'flex-start'
+          }}
+        >
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '900px',
+              margin: 'auto',
+              maxHeight: '80vh'
+            }}
+          >
             <div className="modal-header">
               <div>
                 <h2>Select Study for Report</h2>
@@ -385,7 +399,7 @@ const Reports = () => {
             </div>
             <div className="modal-body" style={{padding: '0'}}>
               {pendingStudies.length > 0 ? (
-                <div className="table-wrap" style={{maxHeight: '500px', overflowY: 'auto'}}>
+                <div className="table-wrap" style={{maxHeight: '420px', overflowY: 'auto'}}>
                   <table className="tbl">
                     <thead style={{position: 'sticky', top: 0, background: 'var(--panel)', zIndex: 1}}>
                       <tr>
