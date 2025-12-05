@@ -56,7 +56,7 @@ const AdminPage = () => {
   const { addNotification } = useNotifications()
 
 
-  if (!user || (user.userType !== 'Hospital Admin' && user.userType !== 'Administrator')) {
+  if (!user || (user.userType !== 'Hospital Admin')) {
     return <Navigate to="/dashboard" replace />
   }
   
@@ -137,7 +137,7 @@ const AdminPage = () => {
   const handleSaveUserEdit = async () => {
     setLoading(true)
     try {
-      const userTypeId = editUserData.role === 'Administrator' ? 1 :
+      const userTypeId = editUserData.role === 'Hospital Admin' ? 1 :
                         editUserData.role === 'Radiologist' ? 2 : 3
 
       const { error } = await supabase
@@ -205,7 +205,7 @@ const AdminPage = () => {
       if (error) throw error
 
       const userTypeMap = {
-        1: 'Administrator',
+        1: 'Hospital Admin',
         2: 'Radiologist',
         3: 'Rad Tech'
       }
@@ -241,7 +241,7 @@ const AdminPage = () => {
     
     try {
       // Map role to user_type_id
-      const userTypeId = userRole === 'Administrator' ? 1 :
+      const userTypeId = userRole === 'Hospital Admin' ? 1 :
                         userRole === 'Radiologist' ? 2 : 3
       
       // Generate user ID based on role
@@ -862,7 +862,7 @@ const AdminPage = () => {
                 required
               >
                 <option value="">Select Role</option>
-                <option value="Administrator">Administrator</option>
+                <option value="Hospital Admin">Administrator</option>
                 <option value="Radiologist">Radiologist</option>
                 <option value="Rad Tech">Rad Tech</option>
               </select>
@@ -1165,7 +1165,7 @@ const AdminPage = () => {
                         onChange={(e) => setEditUserData({...editUserData, role: e.target.value})}
                         style={{width: '100%', padding: '8px 12px', border: '1px solid var(--card-border)', borderRadius: '6px'}}
                       >
-                        <option value="Administrator">Administrator</option>
+                        <option value="Hospital Admin">Administrator</option>
                         <option value="Radiologist">Radiologist</option>
                         <option value="Rad Tech">Rad Tech</option>
                       </select>
