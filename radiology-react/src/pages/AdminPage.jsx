@@ -288,6 +288,20 @@ const AdminPage = () => {
       
       if (userError) throw userError
       
+      // Send credentials email via Supabase Edge Function (Resend)
+      try {
+        await supabase.functions.invoke('send-account-email', {
+          body: {
+            email,
+            userId,
+            name: `${firstName} ${lastName}`,
+            password
+          }
+        })
+      } catch (emailErr) {
+        console.error('Failed to send account email:', emailErr)
+      }
+      
       // Show success modal with credentials
       setNewUserCredentials({
         userId,
