@@ -249,7 +249,11 @@ export const studyService = {
       if (fileRecords.length > 0) {
         const { error: updateError } = await supabase
           .from('studies')
-          .update({ dicom_files: fileRecords })
+          .update({ 
+            dicom_files: fileRecords,
+            status: 'completed',  // ← ADD THIS LINE
+            updated_at: new Date().toISOString()
+          })
           .eq('id', studyUuid)
 
         if (updateError) {
@@ -381,7 +385,11 @@ export const studyService = {
 
           const { error: updateError } = await supabase
             .from('studies')
-            .update({ dicom_files: allFiles })
+            .update({ 
+              dicom_files: allFiles,
+              status: 'completed',  // ← ADD THIS LINE
+              updated_at: new Date().toISOString()
+            })
             .eq('id', studyUuid)
 
           if (updateError) {

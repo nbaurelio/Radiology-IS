@@ -66,11 +66,12 @@ const Dashboard = () => {
   const getBadgeClass = (type, value) => {
     if (type === 'priority') {
       return value === 'stat' ? 'badge-pending' : 
-             value === 'urgent' ? 'badge-reading' : 'badge-done'
+            value === 'urgent' ? 'badge-reading' : 'badge-done'
     }
     if (type === 'status') {
-      return value === 'pending' ? 'badge-pending' :
-             value === 'reading' ? 'badge-reading' : 'badge-done'
+      return value === 'pending' ? 'badge-pending' :      // Yellow - Scheduled, awaiting upload
+            value === 'completed' ? 'badge-reading' :    // Blue - DICOM uploaded, awaiting report
+            'badge-done'                                  // Green - Report finalized
     }
     return 'badge-done'
   }
@@ -186,8 +187,8 @@ const Dashboard = () => {
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
-              <option value="reading">Reading</option>
               <option value="completed">Completed</option>
+              <option value="finalized">Finalized</option>
             </select>
             <select 
               value={priorityFilter}

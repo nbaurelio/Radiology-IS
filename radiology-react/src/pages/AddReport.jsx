@@ -21,7 +21,6 @@ const AddReport = () => {
     exam_type: '',
     modality: '',
     priority: 'routine',
-    status: 'pending',
     assigned_radiologist: '',
     notes: '',
     findings: '',
@@ -470,22 +469,6 @@ const AddReport = () => {
                       <option value="routine">Routine</option>
                       <option value="urgent">Urgent</option>
                       <option value="stat">STAT</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
-                      Status <span style={{color: 'var(--error)'}}>*</span>
-                    </label>
-                    <select 
-                      name="status"
-                      className="form-input"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="reading">Reading</option>
-                      <option value="completed">Completed</option>
                     </select>
                   </div>
                 </div>

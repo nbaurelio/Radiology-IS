@@ -78,8 +78,9 @@ const Reports = () => {
   }
 
   const getBadgeClass = (status) => {
-    return status === 'pending' ? 'badge-pending' :
-           status === 'reading' ? 'badge-reading' : 'badge-done'
+    return status === 'pending' ? 'badge-pending' :      // Yellow - Scheduled
+          status === 'completed' ? 'badge-reading' :    // Blue - DICOM uploaded
+          'badge-done'                                   // Green - Report finalized
   }
 
   const getPriorityBadgeClass = (priority) => {

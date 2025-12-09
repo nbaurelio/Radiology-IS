@@ -38,8 +38,9 @@ const ReportDetail = () => {
   }
 
   const getStatusBadgeClass = (status) => {
-    return status === 'pending' ? 'badge-pending' :
-           status === 'reading' ? 'badge-reading' : 'badge-done'
+    return status === 'pending' ? 'badge-pending' :      // Yellow - Scheduled
+          status === 'completed' ? 'badge-reading' :    // Blue - DICOM uploaded
+          'badge-done'  // Green - Report finalized
   }
 
   const priorityText = report && report.priority === 'stat' ? 'STAT' : 
@@ -51,7 +52,6 @@ const ReportDetail = () => {
       exam_type: report.exam_type || '',
       modality: report.modality || '',
       priority: report.priority || 'routine',
-      status: report.status || 'pending',
       assigned_radiologist: report.assigned_radiologist || '',
       findings: report.findings || '',
       impression: report.impression || '',
@@ -295,19 +295,6 @@ const ReportDetail = () => {
                       <option value="routine">Routine</option>
                       <option value="urgent">Urgent</option>
                       <option value="stat">STAT</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Status</label>
-                    <select
-                      name="status"
-                      className="form-input"
-                      value={editData.status}
-                      onChange={handleInputChange}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="reading">Reading</option>
-                      <option value="completed">Completed</option>
                     </select>
                   </div>
                   <div className="form-group">

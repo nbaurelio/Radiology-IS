@@ -79,10 +79,10 @@ const StudyDetail = () => {
   }
 
   const getStatusBadgeClass = (status) => {
-    return status === 'pending' ? 'badge-pending' :
-           status === 'reading' ? 'badge-reading' : 'badge-done'
+    return status === 'pending' ? 'badge-pending' :      // Yellow - Scheduled
+          status === 'completed' ? 'badge-reading' :    // Blue - DICOM uploaded
+          'badge-done'  // Green - Report finalized
   }
-
   const priorityText = study.priority === 'stat' ? 'STAT' : 
                       (study.priority || 'routine').charAt(0).toUpperCase() + (study.priority || 'routine').slice(1)
   const statusText = (study.status || 'pending').charAt(0).toUpperCase() + (study.status || 'pending').slice(1)

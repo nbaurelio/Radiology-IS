@@ -47,6 +47,8 @@ export const reportService = {
     }
   },
 
+// reportService.js - Updated createReport function
+
   async createReport(reportData) {
     try {
       const { data: patient, error: patientError } = await supabase
@@ -68,7 +70,7 @@ export const reportService = {
         exam_type: reportData.exam_type,
         study_date: reportData.study_date || reportData.appointment_date,
         schedule: reportData.appointment_date || null,
-        status: reportData.status || 'pending',
+        status: 'finalized', // ← Report status is finalized when created
         modality: reportData.modality || null,
         priority: reportData.priority || 'routine',
         assigned_radiologist: reportData.assigned_radiologist || null,
@@ -93,6 +95,25 @@ export const reportService = {
       if (reportError) {
         console.error('Report insert error details:', reportError)
         throw reportError
+      }
+
+      // Update linked study status to 'finalized' after report is created
+      if (insertData.study_id) {
+        const { data: studies } = await supabase
+          .from('studies')
+          .select('id')
+          .eq('study_id', insertData.study_id)
+          .limit(1)
+
+        if (studies && studies.length > 0) {
+          await supabase
+            .from('studies')
+            .update({ 
+              status: 'finalized', // ← Study becomes finalized when report is created
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', studies[0].id)
+        }
       }
 
       return { success: true, report: report }

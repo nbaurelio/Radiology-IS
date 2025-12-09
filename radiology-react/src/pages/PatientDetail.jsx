@@ -429,9 +429,9 @@ const PatientDetail = () => {
             {appointments && appointments.length > 0 ? (
               appointments.map((apt, index) => {
                 const getStatusBadgeClass = (status) => {
-                  if (status === 'scheduled' || status === 'pending') return 'badge-pending'
-                  if (status === 'completed') return 'badge-done'
-                  return 'badge-reading'
+                  if (status === 'scheduled' || status === 'pending') return 'badge-pending'  // Yellow
+                  if (status === 'completed') return 'badge-reading'   // Blue - DICOM uploaded
+                  return 'badge-done'  // Green - Report finalized
                 }
                 
                 const formatDateTime = (dateValue) => {
@@ -502,9 +502,9 @@ const PatientDetail = () => {
             {appointments && appointments.filter(a => a.type === 'study').length > 0 ? (
               appointments.filter(a => a.type === 'study').map((study, index) => {
                 const getStatusBadgeClass = (status) => {
-                  if (status === 'scheduled' || status === 'pending') return 'badge-pending'
-                  if (status === 'completed') return 'badge-done'
-                  return 'badge-reading'
+                  if (status === 'scheduled' || status === 'pending') return 'badge-pending'  // Yellow
+                  if (status === 'completed') return 'badge-reading'   // Blue - DICOM uploaded
+                  return 'badge-done'  // Green - Report finalized
                 }
                 
                 const date = study.study_date ? new Date(study.study_date).toLocaleDateString() : 'N/A'
