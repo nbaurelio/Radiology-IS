@@ -5,6 +5,7 @@ import { patientService } from '../services/patientService'
 import { studyService } from '../services/studyService'
 import { useNotifications } from '../contexts/NotificationContext'
 import { createNotification, PRIORITY_LEVELS, USER_ROLES } from '../services/notificationService'
+import { supabase } from '../lib/supabase'
 
 const Patients = () => {
   const [patients, setPatients] = useState([])
@@ -25,6 +26,10 @@ const Patients = () => {
   const [modality, setModality] = useState('')
   const [clinicalHistory, setClinicalHistory] = useState('')
   const [scheduling, setScheduling] = useState(false)
+  
+  // New state for radiologists
+  const [radiologists, setRadiologists] = useState([])
+  const [selectedRadiologist, setSelectedRadiologist] = useState('')
 
   useEffect(() => {
     loadPatients()
@@ -60,6 +65,25 @@ const Patients = () => {
       console.error('Error loading patients:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRadiologists = async () => {
+    try {
+      // Fetch users with radiologist role (user_type_id = 2)
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, user_id, first_name, last_name, email')
+        .eq('user_type_id', 2)
+        .eq('is_active', true)
+        .order('first_name', { ascending: true })
+
+      if (error) throw error
+      
+      setRadiologists(data || [])
+    } catch (error) {
+      console.error('Error loading radiologists:', error)
+      setRadiologists([])
     }
   }
 
@@ -132,6 +156,7 @@ const Patients = () => {
   // Schedule Appointment Functions
   const handleScheduleAppointmentClick = async () => {
     setShowScheduleModal(true)
+    await loadRadiologists() // Load radiologists when modal opens
     // Generate study ID when modal opens
     const generatedId = await studyService.generateStudyId()
     setStudyId(generatedId)
@@ -159,23 +184,52 @@ const Patients = () => {
       return
     }
 
+    if (!modality) {
+      alert('Please select a modality')
+      return
+    }
+
+    if (!selectedRadiologist) {
+      alert('Please select a radiologist')
+      return
+    }
+
+    if (!studyDate) {
+      alert('Please select an appointment date and time')
+      return
+    }
+
     setScheduling(true)
 
     const currentUser = JSON.parse(localStorage.getItem('userSession') || '{}')
     const now = new Date().toISOString()
 
+    // Get selected radiologist details if one was selected
+    let assignedRadiologistName = null
+    let assignedRadiologistId = null
+    
+    if (selectedRadiologist) {
+      const radiologist = radiologists.find(r => r.id === selectedRadiologist)
+      if (radiologist) {
+        assignedRadiologistName = `${radiologist.first_name} ${radiologist.last_name}`
+        assignedRadiologistId = radiologist.id
+      }
+    }
+
     const studyData = {
       study_id: studyId,
       patient_uuid: selectedPatient.id,
       exam_type: examType,
-      modality: modality || null,
+      modality: modality,  // Remove "|| null" since it's now required
       clinical_history: clinicalHistory || 'No clinical history provided',
       priority: priority,
       status: 'pending',
       dicom_files: [],
       created_by: currentUser?.id || null,
       created_at: now,
-      updated_at: now
+      updated_at: now,
+      assigned_radiologist: assignedRadiologistName,
+      assigned_radiologist_id: assignedRadiologistId
     }
 
     try {
@@ -184,14 +238,14 @@ const Patients = () => {
       if (result.success) {
         // Update patient's next_appointment
         await patientService.updatePatient(selectedPatient.id, {
-          next_appointment: studyDate || now,
+          next_appointment: studyDate,
           last_visit_date: now
         })
 
         addNotification(createNotification({
           type: 'study_created',
           title: '✅ Appointment Scheduled',
-          message: `Appointment ${studyId} has been scheduled for ${selectedPatient.first_name} ${selectedPatient.last_name}`,
+          message: `Appointment ${studyId} has been scheduled for ${selectedPatient.first_name} ${selectedPatient.last_name}${assignedRadiologistName ? ` with ${assignedRadiologistName}` : ''}`,
           priority: priority === 'stat' ? PRIORITY_LEVELS.URGENT : PRIORITY_LEVELS.ROUTINE,
           recipientRole: USER_ROLES.ADMIN,
           linkedEntity: { study_id: studyId, patient_id: selectedPatient.patient_id },
@@ -209,6 +263,7 @@ const Patients = () => {
         setExamType('')
         setModality('')
         setClinicalHistory('')
+        setSelectedRadiologist('')
         
         // Reload patients to show updated next appointment
         await loadPatients()
@@ -231,6 +286,7 @@ const Patients = () => {
     setExamType('')
     setModality('')
     setClinicalHistory('')
+    setSelectedRadiologist('')
   }
 
   const calculateAge = (dob) => {
@@ -538,12 +594,13 @@ const Patients = () => {
                   </div>
                   <div>
                     <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
-                      Modality
+                      Modality <span style={{color: '#ef4444'}}>*</span>
                     </label>
                     <select 
                       className="form-input" 
                       value={modality}
                       onChange={(e) => setModality(e.target.value)}
+                      required
                     >
                       <option value="">Select modality</option>
                       <option value="CR">CR - Computed Radiography</option>
@@ -558,9 +615,33 @@ const Patients = () => {
                   </div>
                 </div>
 
+                {/* NEW: Assigned Radiologist Field */}
                 <div style={{marginBottom: '20px'}}>
                   <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
-                    Appointment Date & Time
+                    Assigned Radiologist <span style={{color: '#ef4444'}}>*</span>
+                  </label>
+                  <select 
+                    className="form-input" 
+                    value={selectedRadiologist}
+                    onChange={(e) => setSelectedRadiologist(e.target.value)}
+                    style={{width: '100%'}}
+                    required
+                  >
+                    <option value="">-- Select a radiologist --</option>
+                    {radiologists.map(radiologist => (
+                      <option key={radiologist.id} value={radiologist.id}>
+                        {radiologist.user_id} - {radiologist.first_name} {radiologist.last_name}
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block'}}>
+                    Assign this study to a specific radiologist
+                  </small>
+                </div>
+
+                <div style={{marginBottom: '20px'}}>
+                  <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                    Appointment Date & Time <span style={{color: '#ef4444'}}>*</span>
                   </label>
                   <input 
                     type="datetime-local" 
@@ -568,9 +649,10 @@ const Patients = () => {
                     value={studyDate}
                     onChange={(e) => setStudyDate(e.target.value)}
                     style={{width: '100%'}}
+                    required
                   />
                   <small style={{color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block'}}>
-                    Leave blank for immediate scheduling
+                    Required: Select date and time for the appointment
                   </small>
                 </div>
 
@@ -655,39 +737,40 @@ const Patients = () => {
                 </div>
               )}
               <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
-                <button 
-                  onClick={cancelDelete}
-                  style={{
-                    padding: '10px 20px',
-                    border: '1px solid var(--line)',
-                    background: 'white',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={confirmDelete}
-                  disabled={loading}
-                  style={{
-                    padding: '10px 20px',
-                    border: 'none',
-                    background: 'var(--error)',
-                    color: 'white',
-                    borderRadius: '8px',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    opacity: loading ? 0.6 : 1
-                  }}
-                >
-                  {loading ? 'Deleting...' : 'Delete Patient'}
-                </button>
+                  <button 
+                    onClick={cancelDelete}
+                    style={{
+                      padding: '10px 20px',
+                      border: '1px solid var(--line)',
+                      background: 'white',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={confirmDelete}
+                    disabled={loading}
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      background: 'var(--error)',
+                      color: 'white',
+                      borderRadius: '8px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      opacity: loading ? 0.6 : 1
+                    }}
+                  >
+                    {loading ? 'Deleting...' : 'Delete Patient'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        
       )}
     </section>
   )

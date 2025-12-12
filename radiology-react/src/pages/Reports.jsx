@@ -44,7 +44,7 @@ const Reports = () => {
 
   const loadPendingStudies = async () => {
     try {
-      const result = await studyService.getPendingStudies()
+      const result = await studyService.getCompletedStudies()
       if (result.success) {
         setPendingStudies(result.studies)
       }

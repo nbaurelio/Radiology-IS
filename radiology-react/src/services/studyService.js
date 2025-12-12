@@ -84,6 +84,25 @@ export const studyService = {
     }
   },
 
+  async getCompletedStudies() {
+    try {
+      const { data, error } = await supabase
+        .from('studies')
+        .select(`
+          *,
+          patients(id, patient_id, first_name, last_name)
+        `)
+        .eq('status', 'completed')  // ← Only completed studies
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return { success: true, studies: data }
+    } catch (error) {
+      console.error('Get completed studies error:', error)
+      return { success: false, message: error.message }
+    }
+  },
+
   async getStudyById(studyId) {
     try {
       const { data, error } = await supabase

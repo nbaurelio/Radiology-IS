@@ -21,7 +21,6 @@ const AddReport = () => {
     exam_type: '',
     modality: '',
     priority: 'routine',
-    assigned_radiologist: '',
     notes: '',
     findings: '',
     impression: '',
@@ -411,7 +410,7 @@ const AddReport = () => {
                       className="form-input" 
                       value={formData.study_id}
                       readOnly
-                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                      style={{background: '#f3f4f6', cursor: 'not-allowed'}}
                     />
                   </div>
                   <div>
@@ -423,7 +422,7 @@ const AddReport = () => {
                       className="form-input"
                       value={studyData?.patients ? `${studyData.patients.first_name} ${studyData.patients.last_name}` : 'N/A'}
                       readOnly
-                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                      style={{background: '#f3f4f6', cursor: 'not-allowed'}}
                     />
                   </div>
                 </div>
@@ -438,7 +437,7 @@ const AddReport = () => {
                       className="form-input"
                       value={formData.exam_type || 'N/A'}
                       readOnly
-                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                      style={{background: '#f3f4f6', cursor: 'not-allowed'}}
                     />
                   </div>
                   <div>
@@ -450,7 +449,7 @@ const AddReport = () => {
                       className="form-input"
                       value={formData.modality || 'N/A'}
                       readOnly
-                      style={{background: 'var(--bg)', cursor: 'not-allowed'}}
+                      style={{background: '#f3f4f6', cursor: 'not-allowed'}}
                     />
                   </div>
                 </div>
@@ -460,45 +459,66 @@ const AddReport = () => {
                     <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
                       Priority
                     </label>
-                    <select 
-                      name="priority"
+                    <input 
+                      type="text" 
                       className="form-input"
-                      value={formData.priority}
-                      onChange={handleInputChange}
-                    >
-                      <option value="routine">Routine</option>
-                      <option value="urgent">Urgent</option>
-                      <option value="stat">STAT</option>
-                    </select>
+                      value={formData.priority ? formData.priority.charAt(0).toUpperCase() + formData.priority.slice(1) : 'Routine'}
+                      readOnly
+                      style={{background: '#f3f4f6', cursor: 'not-allowed'}}
+                    />
+                  </div>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
+                      Assigned Radiologist
+                    </label>
+                    <input 
+                      type="text" 
+                      className="form-input"
+                      value={studyData?.assigned_radiologist || 'Not Assigned'}
+                      readOnly
+                      style={{background: '#f3f4f6', cursor: 'not-allowed'}}
+                    />
                   </div>
                 </div>
 
+                {/* Study Status - Read-only, always "Completed" */}
                 <div style={{marginBottom: '16px'}}>
                   <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
-                    Assigned Radiologist
+                    Study Status
                   </label>
                   <input 
                     type="text" 
-                    name="assigned_radiologist"
                     className="form-input"
-                    placeholder="Ex: Dr. Smith"
-                    value={formData.assigned_radiologist}
-                    onChange={handleInputChange}
+                    value="Completed"
+                    readOnly
+                    style={{
+                      background: '#d1fae5',
+                      cursor: 'not-allowed',
+                      color: '#065f46',
+                      fontWeight: '600',
+                      border: '1px solid #6ee7b7'
+                    }}
                   />
+                  <small style={{color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block'}}>
+                    Only completed studies can have reports created
+                  </small>
                 </div>
 
+                {/* Clinical History/Notes - Read-only */}
                 <div>
                   <label style={{display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px'}}>
                     Clinical History / Notes
                   </label>
                   <textarea 
-                    name="notes"
                     className="form-input"
-                    placeholder="Clinical history from the study"
+                    value={studyData?.clinical_history || 'No clinical history provided'}
+                    readOnly
                     rows="3"
-                    value={formData.notes}
-                    onChange={handleInputChange}
+                    style={{background: '#f3f4f6', cursor: 'not-allowed', resize: 'none'}}
                   />
+                  <small style={{color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block'}}>
+                    From scheduled appointment
+                  </small>
                 </div>
               </div>
             </article>
