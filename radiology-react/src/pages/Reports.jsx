@@ -212,10 +212,10 @@ const loadReports = async () => {
         </button>
       </article>
 
-      {/* Pending Studies Section */}
+      {/* Studies Section */}
       <article className="card table-card">
         <div className="hd">
-          Pending Studies (<span>{pendingStudies.length}</span>)
+          Completed Studies (<span>{pendingStudies.length}</span>)
           <p style={{margin: '4px 0 0 0', fontSize: '13px', fontWeight: 400, color: 'var(--muted)'}}>Studies awaiting report creation</p>
         </div>
         <div className="bd">
@@ -281,7 +281,7 @@ const loadReports = async () => {
                 ) : (
                   <tr>
                     <td colSpan="7" style={{textAlign: 'center', padding: '24px'}}>
-                      No pending studies. All studies have been reviewed.
+                      No completed studies. All studies have been reviewed.
                     </td>
                   </tr>
                 )}
@@ -502,7 +502,7 @@ const loadReports = async () => {
               ) : (
                 <div style={{padding: '40px 20px', textAlign: 'center'}}>
                   <p style={{color: 'var(--muted)', marginBottom: '16px'}}>
-                    No pending studies available. All studies have been reviewed or have existing reports.
+                    No completed studies available. All studies have been reviewed or have existing reports.
                   </p>
                   <button 
                     onClick={handleCancelStudySelection}
