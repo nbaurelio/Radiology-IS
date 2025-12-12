@@ -216,7 +216,6 @@ const Dashboard = () => {
                   <th>Date</th>
                   <th>Priority</th>
                   <th>Status</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,15 +259,7 @@ const Dashboard = () => {
                             {(study.status || 'pending').toUpperCase()}
                           </span>
                         </td>
-                        <td data-label="Actions">
-                          <a 
-                            href="#" 
-                            className="btn-grad" 
-                            onClick={(e) => { e.preventDefault(); alert('Study viewer coming soon!'); }}
-                          >
-                            View
-                          </a>
-                        </td>
+
                       </tr>
                     )
                   })

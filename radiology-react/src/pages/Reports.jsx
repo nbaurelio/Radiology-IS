@@ -223,12 +223,13 @@ const loadReports = async () => {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th style={{width: '15%'}}>Study ID</th>
-                  <th style={{width: '15%'}}>Patient</th>
-                  <th style={{width: '10%'}}>Files</th>
-                  <th style={{width: '23%'}}>Upload Date</th>
-                  <th style={{width: '12%'}}>Priority</th>
-                  <th style={{width: '25%'}}>Clinical History</th>
+                  <th style={{width: '10%'}}>Study ID</th>
+                  <th style={{width: '10%'}}>Patient</th>
+                  <th style={{width: '5%'}}>Files</th>
+                  <th style={{width: '15%'}}>Upload Date</th>
+                  <th style={{width: '10%'}}>Priority</th>
+                  <th style={{width: '12%'}}>Status</th>       
+                  <th style={{width: '20%'}}>Clinical History</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,13 +269,18 @@ const loadReports = async () => {
                         <td data-label="Priority">
                           <span className={`badge ${priorityClass}`}>{priorityText}</span>
                         </td>
+                        <td data-label="Status">
+                          <span className={`badge ${getBadgeClass('completed')}`}>
+                            Awaiting Report
+                          </span>
+                        </td>
                         <td data-label="Clinical History">{truncatedHistory}</td>
                       </tr>
                     )
                   })
                 ) : (
                   <tr>
-                    <td colSpan="6" style={{textAlign: 'center', padding: '24px'}}>
+                    <td colSpan="7" style={{textAlign: 'center', padding: '24px'}}>
                       No pending studies. All studies have been reviewed.
                     </td>
                   </tr>
