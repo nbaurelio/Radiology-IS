@@ -372,12 +372,6 @@ const ReportDetail = () => {
             <div style={{padding: '20px'}}>
               <div className="info-grid">
                 <div className="info-card">
-                  <div className="info-label">Study Date</div>
-                  <div className="info-value">
-                    {report.study_date ? new Date(report.study_date).toLocaleString() : 'N/A'}
-                  </div>
-                </div>
-                <div className="info-card">
                   <div className="info-label">Scheduled Date</div>
                   <div className="info-value">
                     {report.schedule ? new Date(report.schedule).toLocaleString() : 'N/A'}
@@ -385,7 +379,7 @@ const ReportDetail = () => {
                 </div>
                 <div className="info-card">
                   <div className="info-label">Report Status</div>
-                  <div className="info-value">{report.report_status || 'Draft'}</div>
+                  <div className="info-value">{report.status || 'Draft'}</div>
                 </div>
                 <div className="info-card">
                   <div className="info-label">Created At</div>

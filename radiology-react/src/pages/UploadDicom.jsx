@@ -228,7 +228,18 @@ const UploadDicom = () => {
           exam_type: selectedStudy.exam_type || 'General Study'
         })
         addNotification(notif)
+        
+        // ✅ Mark study as COMPLETED after successful upload
+        const { error: statusError } = await supabase
+          .from('studies')
+          .update({ status: 'completed', updated_at: new Date().toISOString() })
+          .eq('id', selectedStudy.id)
 
+        if (statusError) {
+          console.error('Failed to update study status:', statusError)
+          alert('Files uploaded, but failed to update study status to Completed.')
+        }
+        
         // Reset form
         setSelectedFiles([])
         setSelectedAdditionalFiles([])
@@ -295,7 +306,7 @@ const UploadDicom = () => {
       <div className="form-page">
         <h1 style={{fontSize: '28px', marginBottom: '24px', color: 'var(--text)'}}>Upload DICOM Files to Existing Study</h1>
 
-        <div onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           {/* Patient Selection Section */}
           <div className="form-section">
             <h2 className="form-section-title">Step 1: Select Patient</h2>
@@ -408,7 +419,7 @@ const UploadDicom = () => {
                             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px', color: 'var(--muted)'}}>
                               <div><strong>Exam Type:</strong> {study.exam_type || 'N/A'}</div>
                               <div><strong>Modality:</strong> {study.modality || 'N/A'}</div>
-                              <div><strong>Scheduled:</strong> {formatDateTime(study.created_at)}</div>
+                              <div><strong>Scheduled:</strong> {formatDateTime(study.schedule)}</div>
                               <div><strong>Status:</strong> {study.status || 'pending'}</div>
                             </div>
                             {study.clinical_history && (
@@ -575,7 +586,7 @@ const UploadDicom = () => {
               </button>
             </div>
           )}
-        </div>
+        </form>
       </div>
     </div>
   )

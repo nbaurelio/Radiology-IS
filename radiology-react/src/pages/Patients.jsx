@@ -216,6 +216,8 @@ const Patients = () => {
       }
     }
 
+    const scheduleForDb = studyDate && studyDate.length === 16 ? `${studyDate}:00` : studyDate
+
     const studyData = {
       study_id: studyId,
       patient_uuid: selectedPatient.id,
@@ -228,6 +230,7 @@ const Patients = () => {
       created_by: currentUser?.id || null,
       created_at: now,
       updated_at: now,
+      schedule: scheduleForDb,
       assigned_radiologist: assignedRadiologistName,
       assigned_radiologist_id: assignedRadiologistId
     }
@@ -238,7 +241,7 @@ const Patients = () => {
       if (result.success) {
         // Update patient's next_appointment
         await patientService.updatePatient(selectedPatient.id, {
-          next_appointment: studyDate,
+          next_appointment: scheduleForDb,
           last_visit_date: now
         })
 

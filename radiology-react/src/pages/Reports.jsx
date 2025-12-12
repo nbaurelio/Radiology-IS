@@ -20,9 +20,9 @@ const Reports = () => {
   const [selectedStudyForReport, setSelectedStudyForReport] = useState(null)
 
   useEffect(() => {
-    loadPendingStudies()
     loadReports()
   }, [])
+
 
   useEffect(() => {
     if (searchTimeout) {
@@ -53,34 +53,59 @@ const Reports = () => {
     }
   }
 
-  const loadReports = async () => {
-    try {
-      const result = await reportService.getAllReports()
-      if (result.success) {
-        setReports(result.reports)
-      }
-    } catch (error) {
-      console.error('Error loading reports:', error)
-    } finally {
-      setLoading(false)
-    }
+  const filterPendingStudies = (studies, finalizedReports) => {
+    const finalizedStudyIds = new Set(
+      (finalizedReports || []).map(r => (r.study_id || '').toString())
+    )
+    return (studies || []).filter(s => !finalizedStudyIds.has((s.study_id || '').toString()))
   }
+
+
+const loadReports = async () => {
+  try {
+    const result = await reportService.getAllReports()
+    if (result.success) {
+      const finalizedOnly = (result.reports || []).filter(
+        (r) => (r.status || '').toLowerCase() === 'finalized'
+      )
+
+      setReports(finalizedOnly)
+
+      // ✅ always re-load pending studies then filter them
+      const pendingRes = await studyService.getCompletedStudies()
+      if (pendingRes.success) {
+        setPendingStudies(filterPendingStudies(pendingRes.studies, finalizedOnly))
+      }
+    }
+  } catch (error) {
+    console.error('Error loading reports:', error)
+  } finally {
+    setLoading(false)
+  }
+}
+
+
 
   const searchReports = async (term) => {
     try {
       const result = await reportService.searchReports(term)
-      if (result.success) {
-        setReports(result.reports)
-      }
+        if (result.success) {
+          const finalizedOnly = (result.reports || []).filter(
+            (r) => (r.status || '').toLowerCase() === 'finalized'
+          )
+          setReports(finalizedOnly)
+        }
     } catch (error) {
       console.error('Error searching reports:', error)
     }
   }
 
+
   const getBadgeClass = (status) => {
-    return status === 'pending' ? 'badge-pending' :      // Yellow - Scheduled
-          status === 'completed' ? 'badge-reading' :    // Blue - DICOM uploaded
-          'badge-done'                                   // Green - Report finalized
+    // status here will be report_status
+    if (status === 'finalized') return 'badge-done'       // Green
+    if (status === 'completed') return 'badge-reading'    // Blue (if you ever show it)
+    return 'badge-pending'                               // Yellow (fallback)
   }
 
   const getPriorityBadgeClass = (priority) => {
@@ -290,8 +315,12 @@ const Reports = () => {
                       (report.name || 'Unknown Patient')
                     
                     const studyId = report.study_id || 'N/A'
-                    const statusClass = getBadgeClass(report.status)
-                    const statusText = (report.status || 'pending').charAt(0).toUpperCase() + (report.status || 'pending').slice(1).toLowerCase()
+                    const displayStatus = (report.status || '').toLowerCase() || 'not_started'
+                    const statusClass = getBadgeClass(displayStatus)
+                    const statusText =
+                      displayStatus === 'not_started'
+                        ? 'Not Started'
+                        : displayStatus.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
 
                     const priority = report.priority || 'routine'
                     const priorityClass = getPriorityBadgeClass(priority)
@@ -299,7 +328,7 @@ const Reports = () => {
                                        priority.charAt(0).toUpperCase() + priority.slice(1)
 
                     let dateStr = 'N/A'
-                    const dateToUse = report.study_date || report.schedule
+                    const dateToUse = report.schedule
                     if (dateToUse) {
                       const date = new Date(dateToUse)
                       const month = String(date.getMonth() + 1).padStart(2, '0')

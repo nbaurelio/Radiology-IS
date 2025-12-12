@@ -42,11 +42,16 @@ const AddReport = () => {
       if (result.success && result.study) {
         const study = result.study
         setStudyData(study)
-        
+
+        if ((study.status || '').toLowerCase() !== 'completed') {
+          alert(`This study is "${study.status}". Only COMPLETED studies can have reports created.`)
+          navigate('/reports')
+          return
+        }
         setFormData(prev => ({
           ...prev,
           study_id: study.study_id || '',
-          patient_id: study.patient_uuid || '',
+          patient_id: study.patients?.id || '',
           exam_type: study.exam_type || '',
           modality: study.modality || '',
           priority: study.priority || 'routine',
@@ -109,27 +114,57 @@ const AddReport = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+      if (!formData.study_id) {
+        alert('Missing Study ID')
+        return
+      }
+
     setLoading(true)
     
-    const reportData = {
-      ...formData,
-      appointment_date: new Date().toISOString(),
-      created_at: new Date().toISOString()
-    }
+  const reportData = {
+    study_id: formData.study_id,
+    patient_id: formData.patient_id || null,
+    exam_type: formData.exam_type,
+    modality: formData.modality,
+    priority: formData.priority,
+    notes: formData.notes,
+
+    // ✅ keep appointment datetime here
+    schedule: studyData?.schedule || null,
+
+    findings: formData.findings,
+    impression: formData.impression,
+    recommendations: formData.recommendations,
+
+    // ✅ required DATE: derive from schedule
+    study_date: studyData?.schedule
+      ? String(studyData.schedule).slice(0, 10) // "YYYY-MM-DD"
+      : new Date().toISOString().slice(0, 10),
+
+    last_updated: new Date().toISOString(),
+  }
+
+
+
     
     try {
       const result = await reportService.createReport(reportData)
       
       if (result.success) {
         if (studyData) {
-          const statusToSet = reportData.status === 'completed' ? 'completed' : 'reading'
-          await studyService.updateStudyStatus(studyData.id, statusToSet)
+          // ✅ after creating a report, the study becomes FINALIZED
+          const upd = await studyService.updateStudyStatus(studyData.id, 'finalized')
+          if (!upd.success) {
+            console.error('Failed to finalize study:', upd.message)
+            alert('Report saved, but study status failed to update. Please refresh or contact admin.')
+          }
         }
+
         
         addNotification(createNotification({
           type: 'report_created',
           title: '✅ Report Created',
-          message: `Report created for study ${formData.study_id || 'N/A'}. Status: ${reportData.status}.`,
+          message: `Report created for study ${formData.study_id || 'N/A'}. Status: Finalized.`,
           priority: PRIORITY_LEVELS.ROUTINE,
           recipientRole: USER_ROLES.RADIOLOGIST,
           linkedEntity: { study_id: formData.study_id },

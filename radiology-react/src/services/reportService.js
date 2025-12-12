@@ -68,9 +68,9 @@ export const reportService = {
         patient_id: reportData.patient_id,
         name: `${patient.first_name} ${patient.last_name}`,
         exam_type: reportData.exam_type,
-        study_date: reportData.study_date || reportData.appointment_date,
-        schedule: reportData.appointment_date || null,
-        status: 'finalized', // ← Report status is finalized when created
+        study_date: reportData.study_date || (reportData.schedule ? String(reportData.schedule).slice(0, 10) : null),
+        schedule: reportData.schedule || null,
+        status: 'finalized',
         modality: reportData.modality || null,
         priority: reportData.priority || 'routine',
         assigned_radiologist: reportData.assigned_radiologist || null,
