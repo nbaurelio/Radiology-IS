@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { reportService } from '../services/reportService'
 import { studyService } from '../services/studyService'
+import { supabase } from '../lib/supabase'
 
 const ReportDetail = () => {
   const { id } = useParams()
@@ -10,6 +11,32 @@ const ReportDetail = () => {
   const [isEditMode, setIsEditMode] = useState(false)
   const [editData, setEditData] = useState({})
   const [saving, setSaving] = useState(false)
+
+  const [radiologists, setRadiologists] = useState([])
+  const [radiologistsLoading, setRadiologistsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRadiologists = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, first_name, last_name')
+          .eq('user_type_id', 2)  // ← Only Radiologists (id = 2)
+          .order('last_name', { ascending: true })
+
+        if (error) throw error
+
+        setRadiologists(data || [])
+      } catch (err) {
+        console.error('Error fetching radiologists:', err)
+        setRadiologists([])
+      } finally {
+        setRadiologistsLoading(false)
+      }
+    }
+
+    fetchRadiologists()
+  }, [])
 
   useEffect(() => {
     loadReport()
@@ -299,13 +326,23 @@ const ReportDetail = () => {
                   </div>
                   <div className="form-group">
                     <label>Assigned Radiologist</label>
-                    <input
-                      type="text"
-                      name="assigned_radiologist"
-                      className="form-input"
-                      value={editData.assigned_radiologist}
-                      onChange={handleInputChange}
-                    />
+                    {radiologistsLoading ? (
+                      <p style={{color: 'var(--muted)', fontSize: '14px', marginTop: '8px'}}>Loading radiologists...</p>
+                    ) : (
+                      <select
+                        name="assigned_radiologist"
+                        className="form-input"
+                        value={editData.assigned_radiologist || ''}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Unassigned</option>
+                        {radiologists.map((rad) => (
+                          <option key={rad.id} value={`${rad.first_name} ${rad.last_name}`}>
+                            {rad.first_name} {rad.last_name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
               )}
@@ -408,7 +445,7 @@ const ReportDetail = () => {
           <div className="bd">
             <div style={{padding: '20px'}}>
               {report.study_id ? (
-                <StudyFilesSection studyId={report.study_id} />
+                <StudyFilesByStudyIdString studyIdString={report.study_id} />
               ) : (
                 <p style={{color: 'var(--muted)'}}>No associated study found</p>
               )}
@@ -521,61 +558,81 @@ const ReportDetail = () => {
   )
 }
 
-// Component to display study files
-const StudyFilesSection = ({ studyId }) => {
-  const [study, setStudy] = useState(null)
+// New component: Loads files using the human-readable study_id (like "STU-2025-0030")
+const StudyFilesByStudyIdString = ({ studyIdString }) => {
+  const [files, setFiles] = useState({ dicom: [], additional: [] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadStudy()
-  }, [studyId])
-
-  const loadStudy = async () => {
-    try {
-      const result = await studyService.getStudyById(studyId)
-      if (result.success) {
-        setStudy(result.study)
+    const loadFiles = async () => {
+      if (!studyIdString) {
+        setLoading(false)
+        return
       }
-    } catch (error) {
-      console.error('Error loading study:', error)
-    } finally {
-      setLoading(false)
+
+      try {
+        const { data, error } = await supabase
+          .from('studies')
+          .select('dicom_files')
+          .eq('study_id', studyIdString)
+          .single()
+
+        if (error) throw error
+
+        const allFiles = data?.dicom_files || []
+
+        const dicomFiles = allFiles.filter(f => f.file_type === 'dicom' || !f.file_type)
+        const additionalFiles = allFiles.filter(f => f.file_type === 'additional')
+
+        setFiles({ dicom: dicomFiles, additional: additionalFiles })
+      } catch (err) {
+        console.error('Error loading files for study:', err)
+        setFiles({ dicom: [], additional: [] })
+      } finally {
+        setLoading(false)
+      }
     }
-  }
+
+    loadFiles()
+  }, [studyIdString])
 
   if (loading) {
     return <p style={{color: 'var(--muted)'}}>Loading study files...</p>
   }
 
-  if (!study) {
-    return <p style={{color: 'var(--muted)'}}>Study not found</p>
-  }
+  const { dicom, additional } = files
 
-  const dicomFiles = study.dicom_files?.filter(file => file.file_type === 'dicom' || !file.file_type) || []
-  const additionalFiles = study.dicom_files?.filter(file => file.file_type === 'additional') || []
+  if (dicom.length === 0 && additional.length === 0) {
+    return <p style={{color: 'var(--muted)'}}>No files found for this study</p>
+  }
 
   return (
     <div>
       {/* DICOM Files */}
-      {dicomFiles.length > 0 && (
+      {dicom.length > 0 && (
         <div style={{marginBottom: '24px'}}>
           <h4 style={{fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--ink)'}}>
-            DICOM Files ({dicomFiles.length})
+            DICOM Files ({dicom.length})
           </h4>
           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-            {dicomFiles.map((file, index) => {
-              const sizeInMB = (file.size || file.file_size) ? ((file.size || file.file_size) / (1024 * 1024)).toFixed(2) : '0.00'
-              const fileName = file.name || file.file_name || `DICOM File ${index + 1}`
-              const fileIcon = fileName.endsWith('.zip') ? 'folder_zip' : 'insert_drive_file'
-              const uploadDate = (file.uploaded_at || file.upload_date) ? new Date(file.uploaded_at || file.upload_date).toLocaleString() : 'N/A'
-              
+            {dicom.map((file, index) => {
+              const sizeInMB = file.size ? (file.size / (1024 * 1024)).toFixed(2) : '0.00'
+              const fileName = file.name || 'Untitled DICOM'
+              const uploadDate = file.uploaded_at ? new Date(file.uploaded_at).toLocaleString() : 'N/A'
+
               return (
-                <div key={fileName || index} className="file-item">
+                <div key={index} className="file-item">
                   <div className="file-item-info">
-                    <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
-                    <div style={{flex: 1, minWidth: 0}}>
-                      <div className="file-item-name">{fileName}</div>
-                      <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
+                    <span className="material-icons" style={{color: 'var(--brand)', fontSize: '24px'}}>
+                      description
+                    </span>
+                    <div style={{flex: 1, minWidth: 0, marginLeft: '12px'}}>
+                      <div className="file-item-name" style={{fontWeight: 600, color: 'var(--ink)'}}>
+                        {fileName}
+                      </div>
+                      <div className="file-item-size" style={{color: 'var(--muted)', fontSize: '13px'}}>
+                        {sizeInMB} MB • Uploaded: {uploadDate}
+                      </div>
                     </div>
                   </div>
                   <div className="file-item-status">
@@ -589,27 +646,36 @@ const StudyFilesSection = ({ studyId }) => {
       )}
 
       {/* Additional Files */}
-      {additionalFiles.length > 0 && (
+      {additional.length > 0 && (
         <div>
           <h4 style={{fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--ink)'}}>
-            Additional Files ({additionalFiles.length})
+            Additional Files ({additional.length})
           </h4>
           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-            {additionalFiles.map((file, index) => {
-              const sizeInMB = (file.size || file.file_size) ? ((file.size || file.file_size) / (1024 * 1024)).toFixed(2) : '0.00'
-              const fileName = file.name || file.file_name || `Additional File ${index + 1}`
-              const fileIcon = fileName.endsWith('.pdf') ? 'picture_as_pdf' :
-                             (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) ? 'image' :
-                             'insert_drive_file'
-              const uploadDate = (file.uploaded_at || file.upload_date) ? new Date(file.uploaded_at || file.upload_date).toLocaleString() : 'N/A'
-              
+            {additional.map((file, index) => {
+              const sizeInMB = file.size ? (file.size / (1024 * 1024)).toFixed(2) : '0.00'
+              const fileName = file.name || 'Untitled File'
+              const uploadDate = file.uploaded_at ? new Date(file.uploaded_at).toLocaleString() : 'N/A'
+
+              let icon = 'insert_drive_file'
+              const lowerName = fileName.toLowerCase()
+              if (lowerName.endsWith('.pdf')) icon = 'picture_as_pdf'
+              else if (/\.(jpe?g|png|gif)$/i.test(lowerName)) icon = 'image'
+              else if (lowerName.endsWith('.zip')) icon = 'folder_zip'
+
               return (
-                <div key={fileName || index} className="file-item">
+                <div key={index} className="file-item">
                   <div className="file-item-info">
-                    <span className="material-icons" style={{color: 'var(--brand)'}}>{fileIcon}</span>
-                    <div style={{flex: 1, minWidth: 0}}>
-                      <div className="file-item-name">{fileName}</div>
-                      <div className="file-item-size">{sizeInMB} MB • Uploaded: {uploadDate}</div>
+                    <span className="material-icons" style={{color: 'var(--brand)', fontSize: '24px'}}>
+                      {icon}
+                    </span>
+                    <div style={{flex: 1, minWidth: 0, marginLeft: '12px'}}>
+                      <div className="file-item-name" style={{fontWeight: 600, color: 'var(--ink)'}}>
+                        {fileName}
+                      </div>
+                      <div className="file-item-size" style={{color: 'var(--muted)', fontSize: '13px'}}>
+                        {sizeInMB} MB • Uploaded: {uploadDate}
+                      </div>
                     </div>
                   </div>
                   <div className="file-item-status">
@@ -620,10 +686,6 @@ const StudyFilesSection = ({ studyId }) => {
             })}
           </div>
         </div>
-      )}
-
-      {dicomFiles.length === 0 && additionalFiles.length === 0 && (
-        <p style={{color: 'var(--muted)'}}>No files found for this study</p>
       )}
     </div>
   )
