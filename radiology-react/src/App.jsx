@@ -12,6 +12,7 @@ import AddPatient from './pages/AddPatient'
 import Reports from './pages/Reports'
 import AddReport from './pages/AddReport'
 import ReportDetail from './pages/ReportDetail'
+import GenerateReport from './pages/GenerateReport'
 import UploadDicom from './pages/UploadDicom'
 import StudyDetail from './pages/StudyDetail'
 import DicomViewerPage from './pages/DicomViewerPage'
@@ -39,6 +40,7 @@ function App() {
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/reports/add" element={<AddReport />} />
                   <Route path="/reports/:id" element={<ReportDetail />} />
+                  <Route path="/reports/:id/generate" element={<GenerateReport />} />
                   <Route path="/upload" element={<UploadDicom />} />
                   <Route path="/telehealth" element={<Telehealth />} />
                   <Route path="/studies/:id" element={<StudyDetail />} />

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { reportService } from '../services/reportService'
 import { studyService } from '../services/studyService'
 
 const ReportDetail = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -144,7 +145,7 @@ const ReportDetail = () => {
         {!isEditMode ? (
           <div style={{display: 'flex', gap: '12px'}}>
             <button 
-              onClick={() => window.location.href = `/reports/${id}/generate`}
+              onClick={() => navigate(`/reports/${id}/generate`)}
               style={{
                 display: 'flex', 
                 alignItems: 'center', 
