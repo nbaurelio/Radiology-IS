@@ -1,13 +1,27 @@
 // Enable Supabase Edge Runtime types
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
-const corsHeaders = {
+declare global {
+  namespace Deno {
+    const env: {
+      get(key: string): string | undefined
+    }
+    const serve: (handler: (req: Request) => Promise<Response>) => void
+  }
+}
+
+const corsHeaders: { [key: string]: string } = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 }
 
-Deno.serve(async (req) => {
+// Base64 encode for Gmail SMTP authentication
+const base64Encode = (str: string): string => {
+  return btoa(str)
+}
+
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders })
@@ -30,11 +44,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")
-    const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "no-reply@yourdomain.com"
+    const EMAILJS_SERVICE_ID = Deno.env.get("EMAILJS_SERVICE_ID")
+    const EMAILJS_TEMPLATE_ID = Deno.env.get("EMAILJS_TEMPLATE_ID")
+    const EMAILJS_PUBLIC_KEY = Deno.env.get("EMAILJS_PUBLIC_KEY")
 
-    if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY not set")
+    if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+      console.error("EmailJS credentials not set")
       return new Response(
         JSON.stringify({ error: "Email service not configured" }),
         {
@@ -44,33 +59,32 @@ Deno.serve(async (req) => {
       )
     }
 
-    const res = await fetch("https://api.resend.com/emails", {
+    // Use EmailJS for sending emails
+    const emailjsUrl = "https://api.emailjs.com/api/v1.0/email/send"
+    
+    const emailData = {
+      service_id: Deno.env.get("EMAILJS_SERVICE_ID"),
+      template_id: Deno.env.get("EMAILJS_TEMPLATE_ID"),
+      user_id: Deno.env.get("EMAILJS_PUBLIC_KEY"),
+      template_params: {
+        to_email: email,
+        to_name: name || "User",
+        user_id: userId,
+        password: password // Use the password passed from AdminPage
+      }
+    }
+
+    const emailResponse = await fetch(emailjsUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: `XferDx <${FROM_EMAIL}>`,
-        to: [email],
-        subject: "Your XferDx Account Credentials",
-        text: [
-          `Hello ${name || ""},`,
-          "",
-          "Your XferDx account has been created.",
-          "",
-          `User ID: ${userId}`,
-          `Email: ${email}`,
-          `Password: ${password}`,
-          "",
-          "Please log in and change your password after first login.",
-        ].join("\n"),
-      }),
+      body: JSON.stringify(emailData),
     })
 
-    if (!res.ok) {
-      const body = await res.text()
-      console.error("Resend error:", body)
+    if (!emailResponse.ok) {
+      const errorBody = await emailResponse.text()
+      console.error("EmailJS error:", errorBody)
       return new Response(
         JSON.stringify({ error: "Email send failed" }),
         {

@@ -227,160 +227,194 @@ const AdminPage = () => {
     }
   }
 
+  
   const handleGenerateAccount = async (e) => {
-    e.preventDefault()
-    
-    if (!userRole || !firstName || !lastName || !email || !employeeNumber) {
-      showMessage('error', 'Please fill in all required fields')
-      return
+  e.preventDefault()
+
+  if (!userRole || !firstName || !lastName || !email || !employeeNumber) {
+    showMessage('error', 'Please fill in all required fields')
+    return
+  }
+
+  setLoading(true)
+
+  let createdAuthUserId = null
+
+  try {
+    // Map role to user_type_id
+    const userTypeId =
+      userRole === 'Hospital Admin' ? 1 :
+      userRole === 'Radiologist' ? 2 : 3
+
+    // Generate user ID based on role
+    const rolePrefix =
+      userRole === 'Radiologist' ? 'RAD' :
+      userRole === 'Rad Tech' ? 'TECH' : 'ADMIN'
+
+    // Get count of existing users with this role
+    const { count, error: countError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_type_id', userTypeId)
+
+    if (countError) {
+      throw new Error(`Failed to generate user ID (count error): ${countError.message}`)
     }
 
-    setLoading(true)
-    
-    let createdAuthUserId = null
-    
-    try {
-      // Map role to user_type_id
-      const userTypeId = userRole === 'Hospital Admin' ? 1 :
-                        userRole === 'Radiologist' ? 2 : 3
-      
-      // Generate user ID based on role
-      const rolePrefix = userRole === 'Radiologist' ? 'RAD' :
-                        userRole === 'Rad Tech' ? 'TECH' : 'ADMIN'
-      
-      // Get count of existing users with this role
-      const { count } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_type_id', userTypeId)
-      
-      const userNumber = String((count || 0) + 1).padStart(3, '0')
-      const userId = `${rolePrefix}${userNumber}`
-      
-      // Generate strong random password
-      const password = `${rolePrefix.toLowerCase()}-${generateSecurePassword()}`
-      
-      const now = new Date().toISOString()
-      
-      // Auth email format: userid@radiology.local
-      const authEmail = `${userId.toLowerCase()}@radiology.local`
-      
-      console.log('Creating auth user with email:', authEmail)
-      
-      // STEP 1: Create Supabase Auth user using ADMIN API (bypasses email verification)
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: authEmail,
-        password: password,
-        email_confirm: true, // Auto-confirm email
-        user_metadata: {
-          user_id: userId,
-          first_name: firstName,
-          last_name: lastName,
-          role: userRole
-        }
+    const userNumber = String((count || 0) + 1).padStart(3, '0')
+    const userId = `${rolePrefix}${userNumber}`
+
+    // Generate strong random password
+    const password = `${rolePrefix.toLowerCase()}-${generateSecurePassword()}`
+
+    const now = new Date().toISOString()
+
+    // Auth email format: userid@radiology.local
+    const authEmail = `${userId.toLowerCase()}@radiology.local`
+
+    console.log('Creating auth user with email:', authEmail)
+
+    // STEP 1: Create Supabase Auth user using ADMIN API (bypasses email verification)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: authEmail,
+      password: password,
+      email_confirm: true, // Auto-confirm email
+      user_metadata: {
+        user_id: userId,
+        first_name: firstName,
+        last_name: lastName,
+        role: userRole,
+      },
+    })
+
+    if (authError) {
+      console.error('Auth error:', authError)
+      if (
+        authError.message.includes('already registered') ||
+        authError.message.includes('User already registered')
+      ) {
+        throw new Error(`User ID "${userId}" already exists. Please try again.`)
+      }
+      throw new Error(`Authentication error: ${authError.message}`)
+    }
+
+    if (!authData?.user) {
+      throw new Error('Failed to create authentication user')
+    }
+
+    createdAuthUserId = authData.user.id
+    console.log('Auth user created successfully:', createdAuthUserId)
+
+    // STEP 2: Insert user into database with auth_user_id reference
+    console.log('Creating database record for user:', userId)
+
+    const { data: newUser, error: userError } = await supabase
+      .from('users')
+      .insert({
+        user_id: userId,
+        email: email, // actual email for contact
+        first_name: firstName,
+        last_name: lastName,
+        password_hash: password,
+        plain_password: password,
+        user_type_id: userTypeId,
+        is_active: true,
+        employee_number: employeeNumber,
+        created_at: now,
+        updated_at: now,
+        auth_user_id: authData.user.id,
       })
-      
-      if (authError) {
-        console.error('Auth error:', authError)
-        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
-          throw new Error(`User ID "${userId}" already exists. Please try again.`)
-        }
-        throw new Error(`Authentication error: ${authError.message}`)
-      }
-      
-      if (!authData.user) {
-        throw new Error('Failed to create authentication user')
-      }
-      
-      createdAuthUserId = authData.user.id
-      console.log('Auth user created successfully:', createdAuthUserId)
-      
-      // STEP 2: Insert user into database with auth_user_id reference
-      console.log('Creating database record for user:', userId)
-      
-      const { data: newUser, error: userError } = await supabase
-        .from('users')
-        .insert({
-          user_id: userId,
-          email: email, // Use the actual email provided for contact
-          first_name: firstName,
-          last_name: lastName,
-          password_hash: password,
-          plain_password: password,
-          user_type_id: userTypeId,
-          is_active: true,
-          employee_number: employeeNumber,
-          created_at: now,
-          updated_at: now,
-          auth_user_id: authData.user.id // Link to Supabase Auth user
-        })
-        .select()
-        .single()
-      
-      if (userError) {
-        console.error('Database insert error:', userError)
-        
-        // Cleanup: Delete the auth user we just created
-        try {
+      .select()
+      .single()
+
+    if (userError) {
+      console.error('Database insert error:', userError)
+
+      // Cleanup: Delete the auth user we just created
+      try {
+        if (createdAuthUserId) {
           await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId)
           console.log('Cleaned up auth user after database error')
-        } catch (cleanupError) {
-          console.error('Failed to cleanup auth user:', cleanupError)
         }
-        
-        if (userError.code === '23505') {
-          if (userError.message.includes('email')) {
-            throw new Error(`The email "${email}" has already been registered. Please use a different email address.`)
-          }
-          if (userError.message.includes('user_id')) {
-            throw new Error(`User ID "${userId}" already exists. Please try again.`)
-          }
-        }
-        throw userError
+      } catch (cleanupError) {
+        console.error('Failed to cleanup auth user:', cleanupError)
       }
-      
-      console.log('User created successfully:', newUser)
-      
-      // Show success modal
-      setNewUserCredentials({
-        userId,
-        name: `${firstName} ${lastName}`,
-        authEmail: authEmail, // Login email
-        contactEmail: email, // Contact email
-        password
-      })
-      setShowSuccessModal(true)
-      setShowAddAccountModal(false)
-      
-      await loadUsers()
-      
-      // Reset form
-      setUserRole('')
-      setFirstName('')
-      setLastName('')
-      setEmail('')
-      setEmployeeNumber('')
-      
-      addNotification(createNotification({
-        type: 'user_created',
-        title: '✅ Account Created',
-        message: `Account ${userId} (${firstName} ${lastName}) was created successfully.`,
-        priority: PRIORITY_LEVELS.ROUTINE,
-        recipientRole: USER_ROLES.ADMIN,
-        linkedEntity: { user_id: userId },
-        actionLink: `/admin`,
-        autoRemove: false
-      }))
-    } catch (error) {
-      console.error('Generate account error:', error)
-      let userFriendlyMessage = error.message || 'Failed to create account'
-      
-      setErrorMessage(userFriendlyMessage)
-      setShowErrorModal(true)
-    } finally {
-      setLoading(false)
+
+      // ✅ FIXED: properly closed duplicate-handling braces
+      if (userError.code === '23505') {
+        if (userError.message?.toLowerCase().includes('email')) {
+          throw new Error(`The email "${email}" has already been registered. Please use a different email address.`)
+        }
+        if (userError.message?.toLowerCase().includes('user_id')) {
+          throw new Error(`User ID "${userId}" already exists. Please try again.`)
+        }
+      }
+
+      throw new Error(`Database error: ${userError.message}`)
     }
+
+    console.log('User created successfully:', newUser)
+
+    try {
+      const { error: emailError } = await supabase.functions.invoke('send-account-email', {
+        body: {
+          email: email,
+          userId: userId,
+          name: `${firstName} ${lastName}`,
+          password: password,
+        },
+      })
+
+      if (emailError) {
+        console.error('Failed to send account email:', emailError)
+      } else {
+        console.log('Account credentials email sent successfully to:', email)
+      }
+    } catch (emailErr) {
+      console.error('Failed to send account email:', emailErr)
+    }
+
+    // ✅ Success UI updates / modal (keep whatever you already use)
+    setNewUserCredentials({
+      userId,
+      name: `${firstName} ${lastName}`,
+      authEmail: authEmail,
+      contactEmail: email,
+      password
+    })
+    setShowSuccessModal(true)
+    setShowAddAccountModal(false)
+
+    await loadUsers()
+
+    // Clear form
+    setUserRole('')
+    setFirstName('')
+    setLastName('')
+    setEmail('')
+    setEmployeeNumber('')
+
+    // Notification
+    addNotification(createNotification({
+      type: 'user_created',
+      title: '✅ Account Created',
+      message: `Account ${userId} (${firstName} ${lastName}) was created successfully.`,
+      priority: PRIORITY_LEVELS.ROUTINE,
+      recipientRole: USER_ROLES.ADMIN,
+      linkedEntity: { user_id: userId },
+      actionLink: `/admin`,
+      autoRemove: false,
+    }))
+  } catch (error) {
+    console.error('Generate account error:', error)
+    const userFriendlyMessage = error?.message || 'Failed to create account'
+    setErrorMessage(userFriendlyMessage)
+    setShowErrorModal(true)
+  } finally {
+    setLoading(false)
   }
+}
+
 
   const handleDeleteAllUsers = async () => {
     const confirmation = window.prompt(
