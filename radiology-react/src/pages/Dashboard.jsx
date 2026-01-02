@@ -182,26 +182,98 @@ const Dashboard = () => {
             <select 
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="btn" 
-              style={{padding: '6px 10px', fontSize: '13px'}}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                fontFamily: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
+                border: '1px solid #e0e1e6',
+                borderRadius: '12px',
+                background: 'white',
+                color: '#0f172a',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,.08)',
+                outline: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,.12)'
+                e.target.style.borderColor = '#d0d1d6'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,.08)'
+                e.target.style.borderColor = '#e0e1e6'
+              }}
             >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="finalized">Finalized</option>
+              <option value="" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>All Status</option>
+              <option value="pending" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>Pending</option>
+              <option value="completed" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>Completed</option>
+              <option value="finalized" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>Finalized</option>
             </select>
             <select 
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="btn" 
-              style={{padding: '6px 10px', fontSize: '13px'}}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                fontFamily: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
+                border: '1px solid #e0e1e6',
+                borderRadius: '12px',
+                background: 'white',
+                color: '#0f172a',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,.08)',
+                outline: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,.12)'
+                e.target.style.borderColor = '#d0d1d6'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,.08)'
+                e.target.style.borderColor = '#e0e1e6'
+              }}
             >
-              <option value="">All Priority</option>
-              <option value="routine">Routine</option>
-              <option value="urgent">Urgent</option>
-              <option value="stat">STAT</option>
+              <option value="" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>All Priority</option>
+              <option value="routine" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>Routine</option>
+              <option value="urgent" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>Urgent</option>
+              <option value="stat" style={{background: '#2d2d44', color: 'white', padding: '8px'}}>STAT</option>
             </select>
-            <button className="btn" onClick={loadDashboard} style={{padding: '6px 12px'}}>↻ Refresh</button>
+            <button 
+              onClick={loadDashboard}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                fontFamily: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
+                border: 'none',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, var(--brand), #7a5af8)',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                boxShadow: '0 4px 12px rgba(109,93,252,.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                e.target.style.boxShadow = '0 6px 16px rgba(109,93,252,.4)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                e.target.style.boxShadow = '0 4px 12px rgba(109,93,252,.3)'
+              }}
+            >
+              ↻ Refresh
+            </button>
           </div>
         </div>
         <div className="bd">

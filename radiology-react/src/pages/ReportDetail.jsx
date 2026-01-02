@@ -561,8 +561,10 @@ const ReportDetail = () => {
 
 // New component: Loads files using the human-readable study_id (like "STU-2025-0030")
 const StudyFilesByStudyIdString = ({ studyIdString }) => {
+  const navigate = useNavigate()
   const [files, setFiles] = useState({ dicom: [], additional: [] })
   const [loading, setLoading] = useState(true)
+  const [studyInternalId, setStudyInternalId] = useState(null)
 
   useEffect(() => {
     const loadFiles = async () => {
@@ -574,12 +576,13 @@ const StudyFilesByStudyIdString = ({ studyIdString }) => {
       try {
         const { data, error } = await supabase
           .from('studies')
-          .select('dicom_files')
+          .select('id, dicom_files')
           .eq('study_id', studyIdString)
           .single()
 
         if (error) throw error
 
+        setStudyInternalId(data?.id)
         const allFiles = data?.dicom_files || []
 
         const dicomFiles = allFiles.filter(f => f.file_type === 'dicom' || !f.file_type)
@@ -597,6 +600,14 @@ const StudyFilesByStudyIdString = ({ studyIdString }) => {
     loadFiles()
   }, [studyIdString])
 
+  const handleViewImages = () => {
+    if (!studyInternalId || files.dicom.length === 0) {
+      alert('No DICOM files available to view')
+      return
+    }
+    navigate(`/studies/${studyInternalId}/viewer`)
+  }
+
   if (loading) {
     return <p style={{color: 'var(--muted)'}}>Loading study files...</p>
   }
@@ -612,9 +623,30 @@ const StudyFilesByStudyIdString = ({ studyIdString }) => {
       {/* DICOM Files */}
       {dicom.length > 0 && (
         <div style={{marginBottom: '24px'}}>
-          <h4 style={{fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--ink)'}}>
-            DICOM Files ({dicom.length})
-          </h4>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+            <h4 style={{fontSize: '16px', fontWeight: '600', color: 'var(--ink)'}}>
+              DICOM Files ({dicom.length})
+            </h4>
+            <button
+              onClick={handleViewImages}
+              style={{
+                padding: '6px 16px',
+                background: 'var(--brand)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span className="material-icons" style={{fontSize: '18px'}}>visibility</span>
+              View Images
+            </button>
+          </div>
           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
             {dicom.map((file, index) => {
               const sizeInMB = file.size ? (file.size / (1024 * 1024)).toFixed(2) : '0.00'
