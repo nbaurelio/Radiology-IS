@@ -79,14 +79,62 @@ const AdminPage = () => {
 
     setLoading(true)
     try {
-      const { error } = await supabase
+      let authDeleteWarning = null
+
+      const { data: userRecord, error: fetchUserError } = await supabaseAdmin
+        .from('users')
+        .select('auth_user_id')
+        .eq('user_id', userToDelete)
+        .single()
+
+      if (fetchUserError) throw fetchUserError
+
+      const { error: deleteDbError } = await supabaseAdmin
         .from('users')
         .delete()
         .eq('user_id', userToDelete)
 
-      if (error) throw error
+      if (deleteDbError) throw deleteDbError
 
-      showMessage('success', 'User deleted successfully')
+      try {
+        let authUserIdToDelete = userRecord?.auth_user_id
+
+        if (!authUserIdToDelete) {
+          const authEmailToDelete = `${String(userToDelete).toLowerCase()}@radiology.local`
+          const { data: usersData, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
+            page: 1,
+            perPage: 200,
+          })
+
+          if (!listUsersError) {
+            const match = usersData?.users?.find((u) => (u.email || '').toLowerCase() === authEmailToDelete)
+            authUserIdToDelete = match?.id || null
+          }
+        }
+
+        if (authUserIdToDelete) {
+          let deleteAuthError = null
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserIdToDelete)
+            if (!error) {
+              deleteAuthError = null
+              break
+            }
+
+            deleteAuthError = error
+            await new Promise((resolve) => setTimeout(resolve, 800 * attempt))
+          }
+
+          if (deleteAuthError) {
+            authDeleteWarning = 'User was deleted from the database, but the authentication user could not be deleted. Please delete the user in Supabase Authentication -> Users to fully free the email.'
+          }
+        }
+      } catch (deleteAuthErr) {
+        console.error('Failed to delete auth user:', deleteAuthErr)
+        authDeleteWarning = 'User was deleted from the database, but the authentication user could not be deleted. Please delete the user in Supabase Authentication -> Users to fully free the email.'
+      }
+
+      showMessage('success', authDeleteWarning || 'User deleted successfully')
       addNotification(createNotification({
         type: 'user_deleted',
         title: '🗑️ User Deleted',
@@ -251,55 +299,69 @@ const AdminPage = () => {
       userRole === 'Radiologist' ? 'RAD' :
       userRole === 'Rad Tech' ? 'TECH' : 'ADMIN'
 
-    // Get count of existing users with this role
-    const { count, error: countError } = await supabase
+    // Generate next user number based on max existing ID (prevents reusing IDs after deletion)
+    const { data: lastUser, error: lastUserError } = await supabase
       .from('users')
-      .select('*', { count: 'exact', head: true })
+      .select('user_id')
       .eq('user_type_id', userTypeId)
+      .order('user_id', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    if (countError) {
-      throw new Error(`Failed to generate user ID (count error): ${countError.message}`)
+    if (lastUserError) {
+      throw new Error(`Failed to generate user ID (lookup error): ${lastUserError.message}`)
     }
 
-    const userNumber = String((count || 0) + 1).padStart(3, '0')
-    const userId = `${rolePrefix}${userNumber}`
-
-    // Generate strong random password
-    const password = `${rolePrefix.toLowerCase()}-${generateSecurePassword()}`
-
+    const lastNumber = Number(String(lastUser?.user_id || '').replace(rolePrefix, '')) || 0
     const now = new Date().toISOString()
 
-    // Auth email format: userid@radiology.local
-    const authEmail = `${userId.toLowerCase()}@radiology.local`
+    let userId
+    let authEmail
+    let password
+    let authData
 
-    console.log('Creating auth user with email:', authEmail)
+    for (let attempt = 1; attempt <= 20; attempt++) {
+      const userNumber = String(lastNumber + attempt).padStart(3, '0')
+      userId = `${rolePrefix}${userNumber}`
+      authEmail = `${String(userId).toLowerCase()}@radiology.local`
+      password = `${rolePrefix.toLowerCase()}-${generateSecurePassword()}`
 
-    // STEP 1: Create Supabase Auth user using ADMIN API (bypasses email verification)
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: authEmail,
-      password: password,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: {
-        user_id: userId,
-        first_name: firstName,
-        last_name: lastName,
-        role: userRole,
-      },
-    })
+      console.log('Creating auth user with email:', authEmail)
 
-    if (authError) {
-      console.error('Auth error:', authError)
-      if (
-        authError.message.includes('already registered') ||
-        authError.message.includes('User already registered')
-      ) {
-        throw new Error(`User ID "${userId}" already exists. Please try again.`)
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: authEmail,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          user_id: userId,
+          first_name: firstName,
+          last_name: lastName,
+          role: userRole,
+        },
+      })
+
+      if (error) {
+        const msg = (error.message || '').toLowerCase()
+        if (
+          msg.includes('already registered') ||
+          msg.includes('already been registered') ||
+          (msg.includes('registered') && msg.includes('already'))
+        ) {
+          continue
+        }
+        throw new Error(`Authentication error: ${error.message}`)
       }
-      throw new Error(`Authentication error: ${authError.message}`)
+
+      if (!data?.user) {
+        throw new Error('Failed to create authentication user')
+      }
+
+      authData = data
+      break
     }
 
-    if (!authData?.user) {
-      throw new Error('Failed to create authentication user')
+    if (!authData?.user || !userId || !authEmail || !password) {
+      throw new Error('Failed to generate a unique user ID')
     }
 
     createdAuthUserId = authData.user.id
@@ -356,7 +418,7 @@ const AdminPage = () => {
     console.log('User created successfully:', newUser)
 
     try {
-      const { error: emailError } = await supabase.functions.invoke('send-account-email', {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-account-email', {
         body: {
           email: email,
           userId: userId,
@@ -367,8 +429,10 @@ const AdminPage = () => {
 
       if (emailError) {
         console.error('Failed to send account email:', emailError)
+        console.error('Email response data:', emailData)
       } else {
         console.log('Account credentials email sent successfully to:', email)
+        console.log('Email response:', emailData)
       }
     } catch (emailErr) {
       console.error('Failed to send account email:', emailErr)
